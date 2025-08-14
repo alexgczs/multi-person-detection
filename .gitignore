@@ -67,7 +67,6 @@ logs/
 *.pth
 *.onnx
 *.tflite
-models/
 
 # Results and outputs
 results/
