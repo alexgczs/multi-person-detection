@@ -22,6 +22,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
+
       - name: Install system deps (OpenCV build requirements)
         run: |
           sudo apt-get update
@@ -37,9 +45,56 @@ jobs:
       - name: Run tests with coverage
         run: |
           pytest --cov=src --cov-report=xml
+          mv .coverage .coverage.${{ matrix.python-version }}
 
-      - name: Upload coverage report
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-data-${{ matrix.python-version }}
+          path: .coverage.${{ matrix.python-version }}
+
+  coverage:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download coverage artifacts (3.10)
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-data-3.10
+          path: cov
+
+      - name: Download coverage artifacts (3.11)
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-data-3.11
+          path: cov
+
+      - name: Combine coverage and generate XML+HTML
+        run: |
+          python -m pip install --upgrade pip
+          pip install coverage
+          mv cov/.coverage.3.10 .coverage.3.10
+          mv cov/.coverage.3.11 .coverage.3.11
+          coverage combine
+          coverage xml
+          coverage html
+
+      - name: Upload combined coverage XML
         uses: actions/upload-artifact@v4
         with:
           name: coverage-xml
           path: coverage.xml
+
+      - name: Upload combined coverage HTML
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: htmlcov
