@@ -110,6 +110,8 @@ def predict(
     type=float,
     help="Ratio of frames with >1 person to classify as multi-person",
 )
+@click.option("--num-workers", default=1, type=int, help="Parallel workers for evaluation")
+@click.option("--progress/--no-progress", default=True, help="Show progress bar")
 @click.option("--output-dir", "-o", help="Output directory name (default: timestamp)")
 @click.option("--no-report", is_flag=True, help="Skip automatic report generation")
 def evaluate(
@@ -121,6 +123,8 @@ def evaluate(
     sample_rate: int | None,
     max_frames: int | None,
     people_threshold: float | None,
+    num_workers: int,
+    progress: bool,
     output_dir: str,
     no_report: bool,
 ):
@@ -158,6 +162,8 @@ def evaluate(
             frame_sample_rate=sample_rate,
             max_frames=max_frames,
             multiple_people_threshold=people_threshold,
+            num_workers=num_workers,
+            show_progress=progress,
         )
 
         logger.info("Starting dataset evaluation...")

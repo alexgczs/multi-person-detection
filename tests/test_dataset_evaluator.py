@@ -54,6 +54,7 @@ class TestDatasetEvaluator(unittest.TestCase):
                 labels_file=self.labels_file,
                 model_size="n",
                 confidence_threshold=0.5,
+                num_workers=1,
             )
 
             self.assertEqual(evaluator.dataset_path, self.dataset_path)
@@ -71,6 +72,7 @@ class TestDatasetEvaluator(unittest.TestCase):
             evaluator = DatasetEvaluator(
                 dataset_path=self.dataset_path,
                 labels_file=self.labels_file,
+                num_workers=1,
             )
 
             expected_labels = {"test1": 0, "test2": 0, "test3": 1, "test4": 1}
@@ -86,6 +88,59 @@ class TestDatasetEvaluator(unittest.TestCase):
                 DatasetEvaluator(
                     dataset_path=self.dataset_path,
                     labels_file="nonexistent.txt",
+                    num_workers=1,
+                )
+
+    def test_load_labels_missing_columns(self):
+        """Labels file missing required columns should raise ValueError."""
+        with patch("src.utils.dataset_evaluator.PersonDetector") as mock_detector_class:
+            mock_detector = Mock()
+            mock_detector_class.return_value = mock_detector
+
+            bad_labels = os.path.join(self.dataset_path, "bad_labels.txt")
+            # Missing required columns 'video' and/or 'label'
+            df = pd.DataFrame({"foo": ["a"], "bar": [1]})
+            df.to_csv(bad_labels, sep="\t", index=False)
+
+            with self.assertRaises(ValueError):
+                DatasetEvaluator(
+                    dataset_path=self.dataset_path,
+                    labels_file=bad_labels,
+                    num_workers=1,
+                )
+
+    def test_load_labels_invalid_label_values(self):
+        """Labels outside {0,1} should raise ValueError."""
+        with patch("src.utils.dataset_evaluator.PersonDetector") as mock_detector_class:
+            mock_detector = Mock()
+            mock_detector_class.return_value = mock_detector
+
+            bad_labels = os.path.join(self.dataset_path, "bad_values.txt")
+            df = pd.DataFrame({"video": ["v1", "v2"], "label": [2, -1]})
+            df.to_csv(bad_labels, sep="\t", index=False)
+
+            with self.assertRaises(ValueError):
+                DatasetEvaluator(
+                    dataset_path=self.dataset_path,
+                    labels_file=bad_labels,
+                    num_workers=1,
+                )
+
+    def test_load_labels_duplicate_videos(self):
+        """Duplicate video entries should raise ValueError."""
+        with patch("src.utils.dataset_evaluator.PersonDetector") as mock_detector_class:
+            mock_detector = Mock()
+            mock_detector_class.return_value = mock_detector
+
+            dup_labels = os.path.join(self.dataset_path, "dup_labels.txt")
+            df = pd.DataFrame({"video": ["v1", "v1"], "label": [0, 1]})
+            df.to_csv(dup_labels, sep="\t", index=False)
+
+            with self.assertRaises(ValueError):
+                DatasetEvaluator(
+                    dataset_path=self.dataset_path,
+                    labels_file=dup_labels,
+                    num_workers=1,
                 )
 
     def test_evaluate_success(self):
@@ -105,6 +160,7 @@ class TestDatasetEvaluator(unittest.TestCase):
             evaluator = DatasetEvaluator(
                 dataset_path=self.dataset_path,
                 labels_file=self.labels_file,
+                num_workers=1,
             )
 
             results = evaluator.evaluate()
@@ -138,6 +194,7 @@ class TestDatasetEvaluator(unittest.TestCase):
             evaluator = DatasetEvaluator(
                 dataset_path=self.dataset_path,
                 labels_file=self.labels_file,
+                num_workers=1,
             )
 
             results = evaluator.evaluate()
@@ -167,6 +224,7 @@ class TestDatasetEvaluator(unittest.TestCase):
             evaluator = DatasetEvaluator(
                 dataset_path=self.dataset_path,
                 labels_file=self.labels_file,
+                num_workers=1,
             )
 
             results = evaluator.evaluate()

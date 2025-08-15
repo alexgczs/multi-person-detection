@@ -6,7 +6,9 @@ Evaluates model performance on complete datasets.
 
 import json
 import os
-from typing import Dict, List
+import sys
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from typing import Dict, List, Tuple
 
 import pandas as pd
 from loguru import logger
@@ -15,6 +17,7 @@ from sklearn.metrics import (accuracy_score, classification_report,
                              recall_score)
 
 from src.models.person_detector import PersonDetector
+from tqdm import tqdm
 
 
 class DatasetEvaluator:
@@ -35,6 +38,8 @@ class DatasetEvaluator:
         frame_sample_rate: int | None = None,
         max_frames: int | None = None,
         multiple_people_threshold: float | None = None,
+        num_workers: int = 1,
+        show_progress: bool = False,
     ):
         """
         Initialize the dataset evaluator.
@@ -53,6 +58,8 @@ class DatasetEvaluator:
         self.frame_sample_rate = frame_sample_rate
         self.max_frames = max_frames
         self.multiple_people_threshold = multiple_people_threshold
+        self.num_workers = max(1, int(num_workers))
+        self.show_progress = bool(show_progress)
 
         # Setup detector and load labels
         self.detector = PersonDetector(model_size=model_size, device=device)
@@ -80,6 +87,38 @@ class DatasetEvaluator:
         try:
             # Read labels file
             df = pd.read_csv(self.labels_file, sep="\t")
+
+            # Validate columns
+            required_cols = {"video", "label"}
+            if not required_cols.issubset(df.columns):
+                missing = required_cols - set(df.columns)
+                raise ValueError(
+                    f"labels file is missing required columns: {sorted(missing)}"
+                )
+
+            # Drop rows with NaNs in required columns
+            df = df.dropna(subset=["video", "label"]).copy()
+
+            # Normalize video names (strip whitespace)
+            df["video"] = df["video"].astype(str).str.strip()
+
+            # Enforce label integer and in {0,1}
+            try:
+                df["label"] = df["label"].astype(int)
+            except Exception as e:
+                raise ValueError(f"labels must be integers 0/1: {e}")
+            invalid = df[~df["label"].isin([0, 1])]
+            if not invalid.empty:
+                raise ValueError(
+                    f"labels must be 0 or 1; found invalid values: {sorted(invalid['label'].unique())}"
+                )
+
+            # Detect duplicates
+            dups = df[df.duplicated(subset=["video"], keep=False)]["video"].unique()
+            if len(dups) > 0:
+                raise ValueError(
+                    f"duplicate video entries in labels file: {sorted(map(str, dups))}"
+                )
 
             # Create mapping from video name to label
             labels = {}
@@ -113,50 +152,90 @@ class DatasetEvaluator:
         true_labels = []
         video_results = []
 
-        # Go through each video
+        items: List[Tuple[str, int, str]] = []
         for video_name, true_label in self.ground_truth.items():
             video_path = os.path.join(self.dataset_path, f"{video_name}.mp4")
-
             if not os.path.exists(video_path):
                 logger.warning(f"Video file not found: {video_path}")
                 continue
+            items.append((video_name, true_label, video_path))
 
-            try:
-                logger.info(f"Processing video: {video_name}")
+        # Progress bar disabled in non-interactive contexts
+        progress_disable = not sys.stderr.isatty() or not self.show_progress
 
-                # Get model prediction
-                result = self.detector.predict(
-                    video_path=video_path,
-                    confidence_threshold=self.confidence_threshold,
+        if self.num_workers == 1:
+            iterable = tqdm(items, desc="Evaluating", leave=False, disable=progress_disable)
+            for video_name, true_label, video_path in iterable:
+                try:
+                    logger.info(f"Processing video: {video_name}")
+                    result = self.detector.predict(
+                        video_path=video_path,
+                        confidence_threshold=self.confidence_threshold,
+                    )
+                    predicted_label = int(result["has_multiple_people"])
+                    predictions.append(predicted_label)
+                    true_labels.append(true_label)
+                    video_result = {
+                        "video_name": video_name,
+                        "true_label": true_label,
+                        "predicted_label": predicted_label,
+                        "correct": true_label == predicted_label,
+                        "num_people": result["num_people"],
+                        "max_people": result["max_people"],
+                        "multiple_people_ratio": result["multiple_people_ratio"],
+                        "frames_with_multiple": result["frames_with_multiple"],
+                        "total_frames": result["total_frames"],
+                    }
+                    video_results.append(video_result)
+                except Exception as e:
+                    logger.error(f"Error processing video {video_name}: {e}")
+                    continue
+        else:
+            # Parallel processing per video
+            def _worker(args: Tuple[str, int, str]) -> Tuple[str, int, Dict]:
+                vname, tlabel, vpath = args
+                detector = PersonDetector(model_size=self.model_size, device=self.device)
+                # Apply overrides
+                if self.frame_sample_rate is not None:
+                    detector.video_processor.config.FRAME_SAMPLE_RATE = int(self.frame_sample_rate)
+                if self.max_frames is not None:
+                    detector.video_processor.config.MAX_FRAMES = int(self.max_frames)
+                if self.multiple_people_threshold is not None:
+                    detector.config.MULTIPLE_PEOPLE_THRESHOLD = float(self.multiple_people_threshold)
+                res = detector.predict(
+                    video_path=vpath, confidence_threshold=self.confidence_threshold
                 )
+                return vname, tlabel, res
 
-                predicted_label = int(result["has_multiple_people"])
-
-                # Save results
-                predictions.append(predicted_label)
-                true_labels.append(true_label)
-
-                video_result = {
-                    "video_name": video_name,
-                    "true_label": true_label,
-                    "predicted_label": predicted_label,
-                    "correct": true_label == predicted_label,
-                    "num_people": result["num_people"],
-                    "max_people": result["max_people"],
-                    "multiple_people_ratio": result["multiple_people_ratio"],
-                    "frames_with_multiple": result["frames_with_multiple"],
-                    "total_frames": result["total_frames"],
-                }
-                video_results.append(video_result)
-
-                logger.info(
-                    f"{video_name}: True={true_label}, Pred={predicted_label}, "
-                    f"Correct={video_result['correct']}"
-                )
-
-            except Exception as e:
-                logger.error(f"Error processing video {video_name}: {e}")
-                continue
+            with ProcessPoolExecutor(max_workers=self.num_workers) as ex:
+                futures = [ex.submit(_worker, it) for it in items]
+                for fut in tqdm(
+                    as_completed(futures),
+                    total=len(futures),
+                    desc="Evaluating",
+                    leave=False,
+                    disable=progress_disable,
+                ):
+                    try:
+                        video_name, true_label, result = fut.result()
+                    except Exception as e:  # pragma: no cover (timing dependent)
+                        logger.error(f"Error in worker: {e}")
+                        continue
+                    predicted_label = int(result["has_multiple_people"])
+                    predictions.append(predicted_label)
+                    true_labels.append(true_label)
+                    video_result = {
+                        "video_name": video_name,
+                        "true_label": true_label,
+                        "predicted_label": predicted_label,
+                        "correct": true_label == predicted_label,
+                        "num_people": result["num_people"],
+                        "max_people": result["max_people"],
+                        "multiple_people_ratio": result["multiple_people_ratio"],
+                        "frames_with_multiple": result["frames_with_multiple"],
+                        "total_frames": result["total_frames"],
+                    }
+                    video_results.append(video_result)
 
         # Get metrics and compile results
         metrics = self._calculate_metrics(true_labels, predictions)

@@ -13,3 +13,4 @@ loguru>=0.7.0
 # Data analysis and evaluation
 pandas>=2.0.0
 scikit-learn>=1.3.0
+tqdm>=4.64.0

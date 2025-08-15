@@ -125,7 +125,17 @@ class TestCLI(unittest.TestCase):
                     mock_report_class.return_value = mock_report
 
                     result = self.runner.invoke(
-                        cli, ["evaluate", "-d", temp_dir, "-l", labels_file]
+                        cli,
+                        [
+                            "evaluate",
+                            "-d",
+                            temp_dir,
+                            "-l",
+                            labels_file,
+                            "--num-workers",
+                            "1",
+                            "--no-progress",
+                        ],
                     )
 
                     self.assertEqual(result.exit_code, 0)
@@ -196,6 +206,7 @@ class TestCLI(unittest.TestCase):
                             labels_file,
                             "-o",
                             "custom_output",
+                            "--no-progress",
                         ],
                     )
 
@@ -237,6 +248,7 @@ class TestCLI(unittest.TestCase):
                         "-l",
                         labels_file,
                         "--no-report",
+                        "--no-progress",
                     ],
                 )
 
