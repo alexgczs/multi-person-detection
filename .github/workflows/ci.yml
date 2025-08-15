@@ -43,15 +43,10 @@ jobs:
 
 
       - name: Run tests with coverage
-        env:
-          COVERAGE_FILE: .coverage.${{ matrix.python-version }}
         run: |
-          pytest --cov=src --cov-report=xml
+          pytest --cov=src --cov-report=xml --cov-report=html
 
-      - name: Generate HTML coverage
-        if: matrix.python-version == '3.11'
-        run: |
-          coverage html
+      # HTML is already generated above; artifacts only for 3.11
 
       - name: Upload coverage XML
         if: matrix.python-version == '3.11'
