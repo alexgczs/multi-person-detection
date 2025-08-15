@@ -36,7 +36,13 @@ pip install -r requirements.txt
 Get a prediction over one unique video:
 
 ```bash
-python -m src.main predict -i path/to/video.mp4
+python -m src.main predict -i path/to/video.mp4 \
+  --threshold 0.5 \
+  --model-size n \
+  --device cuda \
+  --sample-rate 1 \
+  --max-frames 100 \
+  --people-threshold 0.2
 ```
 
 The output will be printed to stdout as `label predicted: 0` or `label predicted: 1`.
@@ -52,7 +58,9 @@ python -m src.main predict -i path/to/video.mp4 --threshold 0.7
 Evaluate the model on a complete dataset:
 
 ```bash
-python -m src.main evaluate -d path/to/dataset -l path/to/labels.txt
+python -m src.main evaluate -d path/to/dataset -l path/to/labels.txt \
+  --threshold 0.5 --model-size n --device cuda \
+  --sample-rate 1 --max-frames 100 --people-threshold 0.2
 ```
 
 This will:
@@ -89,7 +97,7 @@ This is useful for:
 
 ## How it works
 
-1. **Frame extraction**: Videos are processed frame by frame (currently sampling every frame up to 100 frames)
+1. **Frame extraction**: Videos are processed frame by frame
 2. **Person detection**: Each frame is analyzed using YOLOv8 to detect people
 3. **Aggregation**: The system counts how many frames contain multiple people
 4. **Decision**: If the ratio of frames with multiple people exceeds a threshold, the video is classified as containing multiple people
@@ -98,7 +106,6 @@ This is useful for:
 
 - **Model**: YOLOv8n (nano) by default, but supports all sizes (n, s, m, l, x)
 - **Detection**: COCO-trained model detecting "person" class (class 0)
-- **Threshold**: Currently set to 0.0 (any frame with >1 person triggers classification)
 - **Frame processing**: 640x480 resolution, maintaining aspect ratio
 
 ## Project structure

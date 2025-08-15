@@ -40,8 +40,8 @@ class VideoProcessor:
         """
         try:
             # Use config defaults if not specified
-            sample_rate = sample_rate or self.config.FRAME_SAMPLE_RATE
-            max_frames = max_frames or self.config.MAX_FRAMES
+            sample_rate = int(sample_rate or self.config.FRAME_SAMPLE_RATE)
+            max_frames = int(max_frames or self.config.MAX_FRAMES)
 
             logger.info(f"Extracting frames from: {video_path}")
 

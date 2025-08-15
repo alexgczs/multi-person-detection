@@ -31,6 +31,10 @@ class DatasetEvaluator:
         labels_file: str,
         model_size: str = "n",
         confidence_threshold: float = 0.5,
+        device: str | None = None,
+        frame_sample_rate: int | None = None,
+        max_frames: int | None = None,
+        multiple_people_threshold: float | None = None,
     ):
         """
         Initialize the dataset evaluator.
@@ -45,9 +49,21 @@ class DatasetEvaluator:
         self.labels_file = labels_file
         self.model_size = model_size
         self.confidence_threshold = confidence_threshold
+        self.device = device
+        self.frame_sample_rate = frame_sample_rate
+        self.max_frames = max_frames
+        self.multiple_people_threshold = multiple_people_threshold
 
         # Setup detector and load labels
-        self.detector = PersonDetector(model_size=model_size)
+        self.detector = PersonDetector(model_size=model_size, device=device)
+
+        # Apply overrides directly to detector config
+        if frame_sample_rate is not None:
+            self.detector.video_processor.config.FRAME_SAMPLE_RATE = int(frame_sample_rate)
+        if max_frames is not None:
+            self.detector.video_processor.config.MAX_FRAMES = int(max_frames)
+        if multiple_people_threshold is not None:
+            self.detector.config.MULTIPLE_PEOPLE_THRESHOLD = float(multiple_people_threshold)
         self.ground_truth = self._load_labels()
 
         logger.info(

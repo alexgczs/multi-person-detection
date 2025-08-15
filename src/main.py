@@ -44,7 +44,24 @@ def cli(verbose: bool, log_level: str):
     "--threshold", "-t", default=0.5, help="Confidence threshold for detection"
 )
 @click.option("--model-size", default="n", help="YOLO model size (n, s, m, l, x)")
-def predict(video: str, threshold: float, model_size: str):
+@click.option("--device", default=None, help="Computation device: cpu or cuda")
+@click.option("--sample-rate", default=None, type=int, help="Process every Nth frame")
+@click.option("--max-frames", default=None, type=int, help="Maximum frames per video")
+@click.option(
+    "--people-threshold",
+    default=None,
+    type=float,
+    help="Ratio of frames with >1 person to classify as multi-person",
+)
+def predict(
+    video: str,
+    threshold: float,
+    model_size: str,
+    device: str | None,
+    sample_rate: int | None,
+    max_frames: int | None,
+    people_threshold: float | None,
+):
     """Predict whether a video contains multiple people."""
     try:
         # Validate input
@@ -54,7 +71,14 @@ def predict(video: str, threshold: float, model_size: str):
 
         # Setup detector and process video
         logger.info("Initializing person detector...")
-        detector = PersonDetector(model_size=model_size)
+        detector = PersonDetector(model_size=model_size, device=device)
+        # Apply config overrides if provided
+        if sample_rate is not None:
+            detector.video_processor.config.FRAME_SAMPLE_RATE = int(sample_rate)
+        if max_frames is not None:
+            detector.video_processor.config.MAX_FRAMES = int(max_frames)
+        if people_threshold is not None:
+            detector.config.MULTIPLE_PEOPLE_THRESHOLD = float(people_threshold)
 
         logger.info(f"Processing video: {video}")
         result = detector.predict(video_path=video, confidence_threshold=threshold)
@@ -77,6 +101,15 @@ def predict(video: str, threshold: float, model_size: str):
     "--threshold", "-t", default=0.5, help="Confidence threshold for detection"
 )
 @click.option("--model-size", default="n", help="YOLO model size (n, s, m, l, x)")
+@click.option("--device", default=None, help="Computation device: cpu or cuda")
+@click.option("--sample-rate", default=None, type=int, help="Process every Nth frame")
+@click.option("--max-frames", default=None, type=int, help="Maximum frames per video")
+@click.option(
+    "--people-threshold",
+    default=None,
+    type=float,
+    help="Ratio of frames with >1 person to classify as multi-person",
+)
 @click.option("--output-dir", "-o", help="Output directory name (default: timestamp)")
 @click.option("--no-report", is_flag=True, help="Skip automatic report generation")
 def evaluate(
@@ -84,6 +117,10 @@ def evaluate(
     labels_file: str,
     threshold: float,
     model_size: str,
+    device: str | None,
+    sample_rate: int | None,
+    max_frames: int | None,
+    people_threshold: float | None,
     output_dir: str,
     no_report: bool,
 ):
@@ -117,6 +154,10 @@ def evaluate(
             labels_file=labels_file,
             model_size=model_size,
             confidence_threshold=threshold,
+            device=device,
+            frame_sample_rate=sample_rate,
+            max_frames=max_frames,
+            multiple_people_threshold=people_threshold,
         )
 
         logger.info("Starting dataset evaluation...")
