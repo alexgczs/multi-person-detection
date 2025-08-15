@@ -53,6 +53,16 @@ You can also adjust the detection confidence threshold:
 python -m src.main predict -i path/to/video.mp4 --threshold 0.7
 ```
 
+#### Options
+
+- **--video, -i**: Path to the input video file. Required.
+- **--threshold, -t**: Minimum confidence for person detections. Default: 0.5.
+- **--model-size**: YOLO model size to use (`n`, `s`, `m`, `l`, `x`). Default: `n`.
+- **--device**: Compute device (`cpu` or `cuda`). Default: auto-detect.
+- **--sample-rate**: Process every Nth frame (1 = every frame). Default: 1.
+- **--max-frames**: Maximum number of frames to process per video. Default: 100.
+- **--people-threshold**: Ratio of frames with >1 person to classify as multi-person. Default: 0.0.
+
 ### Dataset evaluation
 
 Evaluate the model on a complete dataset:
@@ -82,6 +92,24 @@ Or skip automatic report generation:
 python -m src.main evaluate -d path/to/dataset -l path/to/labels.txt --no-report
 ```
 
+#### Arguments
+
+- **--dataset-path, -d**: Path to directory with `.mp4` videos (names must match labels). Required.
+- **--labels-file, -l**: TSV file with columns `video` and `label` (0/1). Required.
+
+#### Options
+
+- **--threshold, -t**: Minimum confidence for person detections. Default: 0.5.
+- **--model-size**: YOLO model size to use (`n`, `s`, `m`, `l`, `x`). Default: `n`.
+- **--device**: Compute device (`cpu` or `cuda`). Default: auto-detect.
+- **--sample-rate**: Process every Nth frame (1 = every frame). Default: 1.
+- **--max-frames**: Maximum number of frames to process per video. Default: 100.
+- **--people-threshold**: Ratio of frames with >1 person to classify as multi-person. Default: 0.0.
+- **--num-workers**: Parallel workers for evaluation (per-video). Default: 1.
+- **--progress/--no-progress**: Show or hide progress bar. Default: show.
+- **--output-dir, -o**: Name for results directory under `data/results/`. Default: timestamp.
+- **--no-report**: Skip automatic report generation. Default: off.
+
 ### Report generation
 
 Generate a technical report from existing evaluation results:
@@ -94,6 +122,11 @@ This is useful for:
 - Regenerating reports with different parameters
 - Creating reports from partial evaluation results
 - Debugging report generation
+
+#### Arguments
+
+- **--results-file, -r**: Path to a JSON produced by `evaluate`. Required.
+- **--output-file, -o**: Where to save the generated markdown. If omitted, prints to stdout.
 
 ## How it works
 
