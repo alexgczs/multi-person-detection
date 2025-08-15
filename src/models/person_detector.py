@@ -1,7 +1,7 @@
 """
 Person detection model using YOLOv8.
 
-Determines whether a video contains multiple people.
+Detects multiple people in video frames.
 """
 
 from typing import Dict, List, Optional
@@ -34,20 +34,16 @@ class PersonDetector:
         self.model_size = model_size
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
-        # Initialize YOLO model
+        # Load model and setup
         self.model = self._load_model()
-
-        # Initialize video processor
         self.video_processor = VideoProcessor()
-
-        # Configuration
         self.config = Config()
 
         logger.info(f"PersonDetector initialized with model size: {model_size}")
         logger.info(f"Using device: {self.device}")
 
     def _load_model(self) -> YOLO:
-        """Load the YOLO model for person detection."""
+        """Load YOLO model."""
         try:
             model_name = f"yolov8{self.model_size}.pt"
             model = YOLO(model_name)
@@ -71,18 +67,16 @@ class PersonDetector:
         try:
             logger.info(f"Processing video: {video_path}")
 
-            # Extract frames from video
+            # Get frames and process them
             frames = self.video_processor.extract_frames(video_path)
             logger.info(f"Extracted {len(frames)} frames from video")
 
-            # Process frames to detect people
             frame_results = []
             for i, frame in enumerate(frames):
                 result = self._process_frame(frame, confidence_threshold)
                 result["frame_index"] = i
                 frame_results.append(result)
 
-            # Aggregate results across frames
             final_result = self._aggregate_results(frame_results)
 
             logger.info(

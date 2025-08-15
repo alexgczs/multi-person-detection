@@ -1,7 +1,7 @@
 """
 Video processing utilities.
 
-Provides frame extraction and resizing used by the detector.
+Frame extraction and resizing for the detector.
 """
 
 from typing import List, Optional
@@ -56,7 +56,8 @@ class VideoProcessor:
             duration = total_frames / fps if fps > 0 else 0
 
             logger.info(
-                f"Video properties: {total_frames} frames, {fps:.2f} fps, {duration:.2f}s"
+                f"Video properties: {total_frames} frames, {fps:.2f} fps, "
+                f"{duration:.2f}s"
             )
 
             # Extract frames
