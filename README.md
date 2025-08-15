@@ -94,6 +94,8 @@ pytest --cov=src
 - [ ] Training pipeline for fit models to the task
 - [ ] Analysis
 - [ ] Extras (depending on the time)
+- [ ] Report
+- [ ] Next steps with more time and data
 
 
 ## Notes
