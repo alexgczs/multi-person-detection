@@ -110,10 +110,27 @@ def predict(
     type=float,
     help="Ratio of frames with >1 person to classify as multi-person",
 )
-@click.option("--num-workers", default=1, type=int, help="Parallel workers for evaluation")
-@click.option("--progress/--no-progress", default=True, help="Show progress bar")
-@click.option("--output-dir", "-o", help="Output directory name (default: timestamp)")
-@click.option("--no-report", is_flag=True, help="Skip automatic report generation")
+@click.option(
+    "--num-workers",
+    default=1,
+    type=int,
+    help="Parallel workers for evaluation",
+)
+@click.option(
+    "--progress/--no-progress",
+    default=True,
+    help="Show progress bar",
+)
+@click.option(
+    "--output-dir",
+    "-o",
+    help="Output directory name (default: timestamp)",
+)
+@click.option(
+    "--no-report",
+    is_flag=True,
+    help="Skip automatic report generation",
+)
 def evaluate(
     dataset_path: str,
     labels_file: str,

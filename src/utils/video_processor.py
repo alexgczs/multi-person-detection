@@ -56,8 +56,10 @@ class VideoProcessor:
             duration = total_frames / fps if fps > 0 else 0
 
             logger.info(
-                f"Video properties: {total_frames} frames, {fps:.2f} fps, "
-                f"{duration:.2f}s"
+                "Video properties: %s frames, %.2f fps, %.2fs",
+                total_frames,
+                fps,
+                duration,
             )
 
             # Extract frames
@@ -118,7 +120,9 @@ class VideoProcessor:
 
         # Resize frame
         resized = cv2.resize(
-            frame, (new_width, new_height), interpolation=cv2.INTER_AREA
+            frame,
+            (new_width, new_height),
+            interpolation=cv2.INTER_AREA,
         )
 
         # Pad to target size if necessary
@@ -127,7 +131,8 @@ class VideoProcessor:
             y_offset = (target_height - new_height) // 2
             x_offset = (target_width - new_width) // 2
             padded[
-                y_offset : y_offset + new_height, x_offset : x_offset + new_width
+                y_offset : y_offset + new_height,  # noqa: E203
+                x_offset : x_offset + new_width  # noqa: E203
             ] = resized
             return padded
 

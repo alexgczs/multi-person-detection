@@ -66,11 +66,15 @@ class DatasetEvaluator:
 
         # Apply overrides directly to detector config
         if frame_sample_rate is not None:
-            self.detector.video_processor.config.FRAME_SAMPLE_RATE = int(frame_sample_rate)
+            self.detector.video_processor.config.FRAME_SAMPLE_RATE = int(
+                frame_sample_rate
+            )
         if max_frames is not None:
             self.detector.video_processor.config.MAX_FRAMES = int(max_frames)
         if multiple_people_threshold is not None:
-            self.detector.config.MULTIPLE_PEOPLE_THRESHOLD = float(multiple_people_threshold)
+            self.detector.config.MULTIPLE_PEOPLE_THRESHOLD = float(
+                multiple_people_threshold
+            )
         self.ground_truth = self._load_labels()
 
         logger.info(
@@ -110,7 +114,8 @@ class DatasetEvaluator:
             invalid = df[~df["label"].isin([0, 1])]
             if not invalid.empty:
                 raise ValueError(
-                    f"labels must be 0 or 1; found invalid values: {sorted(invalid['label'].unique())}"
+                    "labels must be 0 or 1; found invalid values: "
+                    f"{sorted(invalid['label'].unique())}"
                 )
 
             # Detect duplicates
@@ -164,7 +169,12 @@ class DatasetEvaluator:
         progress_disable = not sys.stderr.isatty() or not self.show_progress
 
         if self.num_workers == 1:
-            iterable = tqdm(items, desc="Evaluating", leave=False, disable=progress_disable)
+            iterable = tqdm(
+                items,
+                desc="Evaluating",
+                leave=False,
+                disable=progress_disable,
+            )
             for video_name, true_label, video_path in iterable:
                 try:
                     logger.info(f"Processing video: {video_name}")
@@ -194,16 +204,26 @@ class DatasetEvaluator:
             # Parallel processing per video
             def _worker(args: Tuple[str, int, str]) -> Tuple[str, int, Dict]:
                 vname, tlabel, vpath = args
-                detector = PersonDetector(model_size=self.model_size, device=self.device)
+                detector = PersonDetector(
+                    model_size=self.model_size,
+                    device=self.device,
+                )
                 # Apply overrides
                 if self.frame_sample_rate is not None:
-                    detector.video_processor.config.FRAME_SAMPLE_RATE = int(self.frame_sample_rate)
+                    detector.video_processor.config.FRAME_SAMPLE_RATE = int(
+                        self.frame_sample_rate
+                    )
                 if self.max_frames is not None:
-                    detector.video_processor.config.MAX_FRAMES = int(self.max_frames)
+                    detector.video_processor.config.MAX_FRAMES = int(
+                        self.max_frames
+                    )
                 if self.multiple_people_threshold is not None:
-                    detector.config.MULTIPLE_PEOPLE_THRESHOLD = float(self.multiple_people_threshold)
+                    detector.config.MULTIPLE_PEOPLE_THRESHOLD = float(
+                        self.multiple_people_threshold
+                    )
                 res = detector.predict(
-                    video_path=vpath, confidence_threshold=self.confidence_threshold
+                    video_path=vpath,
+                    confidence_threshold=self.confidence_threshold,
                 )
                 return vname, tlabel, res
 
