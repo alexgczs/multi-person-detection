@@ -9,6 +9,8 @@ This is the initial implementation focusing on the core inference pipeline. The 
 - A working CLI that processes videos and outputs binary labels (0/1)
 - YOLOv8-based person detection (using pre-trained COCO weights)
 - Basic video processing with frame extraction
+- Dataset evaluation with performance metrics
+- Technical report generation
 
 ## Quick start
 
@@ -29,7 +31,9 @@ pip install -r requirements.txt
 
 ### Usage
 
-Process a video and get the prediction:
+### Unique prediction
+
+Get a prediction over one unique video:
 
 ```bash
 python -m src.main predict -i path/to/video.mp4
@@ -42,6 +46,46 @@ You can also adjust the detection confidence threshold:
 ```bash
 python -m src.main predict -i path/to/video.mp4 --threshold 0.7
 ```
+
+### Dataset evaluation
+
+Evaluate the model on a complete dataset:
+
+```bash
+python -m src.main evaluate -d path/to/dataset -l path/to/labels.txt
+```
+
+This will:
+- Process all videos in the dataset
+- Compare predictions with ground truth labels
+- Calculate performance metrics (accuracy, precision, recall, F1-score)
+- Generate a technical report
+- Save results to a timestamped directory
+
+You can also specify a custom output directory:
+
+```bash
+python -m src.main evaluate -d path/to/dataset -l path/to/labels.txt -o my_evaluation
+```
+
+Or skip automatic report generation:
+
+```bash
+python -m src.main evaluate -d path/to/dataset -l path/to/labels.txt --no-report
+```
+
+### Report generation
+
+Generate a technical report from existing evaluation results:
+
+```bash
+python -m src.main report -r path/to/evaluation_results.json
+```
+
+This is useful for:
+- Regenerating reports with different parameters
+- Creating reports from partial evaluation results
+- Debugging report generation
 
 ## How it works
 
@@ -65,6 +109,8 @@ src/
 │   └── person_detector.py    # Main detection logic
 ├── utils/
 │   ├── config.py            # Configuration management
+│   ├── dataset_evaluator.py # Dataset evaluation utilities
+│   ├── report_generator.py  # Technical report generation
 │   └── video_processor.py   # Video frame extraction
 └── main.py                  # CLI interface
 
@@ -89,7 +135,8 @@ pytest --cov=src
 ## Next steps
 
 - [x] Inference pipeline (logic of detect multiple persons)
-- [ ] Performance evaluation on the provided dataset
+- [x] Performance evaluation on the provided dataset
+- [x] Technical report generation
 - [ ] Generalization of models
 - [ ] Training pipeline for fit models to the task
 - [ ] Analysis
