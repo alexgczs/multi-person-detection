@@ -384,6 +384,32 @@ class TestCLI(unittest.TestCase):
         result = self.runner.invoke(cli, ["--log-level", "DEBUG", "--help"])
         self.assertEqual(result.exit_code, 0)
 
+    @patch("src.main.run_webcam_demo")
+    def test_cli_demo_invocation(self, mock_run_demo):
+        """Demo command should call run_webcam_demo with provided options."""
+        mock_run_demo.return_value = 0
+        result = self.runner.invoke(
+            cli,
+            [
+                "demo",
+                "--camera-index",
+                "1",
+                "--backend",
+                "yolov8",
+                "--model-size",
+                "n",
+                "--device",
+                "cpu",
+                "--threshold",
+                "0.25",
+                "--sample-rate",
+                "2",
+                "--no-show-confidence",
+            ],
+        )
+        self.assertEqual(result.exit_code, 0)
+        mock_run_demo.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

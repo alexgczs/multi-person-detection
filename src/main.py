@@ -2,6 +2,7 @@
 CLI interface for multi-person detection.
 
 Commands to predict, evaluate videos, and generate reports.
+Also provides a real-time webcam demo.
 """
 
 import os
@@ -12,6 +13,7 @@ import click
 from loguru import logger
 
 from src.models.person_detector import PersonDetector
+from src.demo.realtime import run_webcam_demo
 from src.utils.dataset_evaluator import DatasetEvaluator
 from src.utils.report_generator import ReportGenerator
 
@@ -310,6 +312,56 @@ def report(results_file: str, output_file: str):
     except Exception as e:
         logger.error(f"Error generating report: {e}")
         sys.exit(1)
+
+
+@cli.command()
+@click.option("--camera-index", default=0, type=int, help="Webcam index to open")
+@click.option(
+    "--backend",
+    default="yolov8",
+    type=click.Choice(
+        [
+            "yolov8",
+            "torchvision_frcnn",
+            "torchvision_ssd",
+            "torchvision_retinanet",
+            "opencv_hog",
+        ],
+        case_sensitive=False,
+    ),
+    help="Detection backend",
+)
+@click.option("--model-size", default="n", help="Model size for the selected backend")
+@click.option("--device", default=None, help="Computation device: cpu or cuda")
+@click.option("--threshold", "-t", default=0.5, type=float,
+              help="Detection confidence threshold")
+@click.option("--sample-rate", default=1, type=int,
+              help="Process every Nth frame (1 = all)")
+@click.option(
+    "--show-confidence/--no-show-confidence",
+    default=True,
+    help="Draw confidence on boxes",
+)
+def demo(
+    camera_index: int,
+    backend: str,
+    model_size: str,
+    device: str | None,
+    threshold: float,
+    sample_rate: int,
+    show_confidence: bool,
+):
+    """Run a real-time webcam demo drawing detected persons and counts."""
+    exit_code = run_webcam_demo(
+        camera_index,
+        backend,
+        model_size,
+        device,
+        threshold,
+        sample_rate,
+        show_confidence,
+    )
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":

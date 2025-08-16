@@ -146,6 +146,29 @@ This is useful for:
 - **Detection**: COCO-trained model detecting "person" class (class 0)
 - **Frame processing**: 640x480 resolution, maintaining aspect ratio
 
+### Real-time demo
+
+Run a realtime webcam demo that draws person detections and overlays the number of people and FPS:
+
+```bash
+python -m src.main demo \
+  --backend yolov8 \
+  --model-size n \
+  --device cpu \
+  --threshold 0.5 \
+  --sample-rate 1
+```
+
+#### Options
+
+- **--camera-index**: Webcam index to open. Default: 0.
+- **--backend**: Detection backend. Supported: `yolov8`, `torchvision_frcnn`, `torchvision_ssd`, `torchvision_retinanet`, `opencv_hog`. Default: `yolov8`.
+- **--model-size**: Model size for selected backend (YOLO sizes: `n`, `s`, `m`, `l`, `x`). Default: `n`.
+- **--device**: `cpu` or `cuda`. Default: auto-detect.
+- **--threshold**: Detection confidence threshold. Default: 0.5.
+- **--sample-rate**: Process every Nth frame (1 = every frame). Default: 1.
+- **--show-confidence/--no-show-confidence**: Toggle confidence labels on boxes. Default: show.
+
 ## Project structure
 
 ```
@@ -183,6 +206,7 @@ pytest --cov=src
 - [x] Performance evaluation on the provided dataset
 - [x] Technical report generation
 - [x] Generalization of models
+- [x] Demo in real time
 - [ ] Training pipeline for fit models to the task
 - [ ] Analysis
 - [ ] Extras (depending on the time)
