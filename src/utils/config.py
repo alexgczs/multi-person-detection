@@ -20,3 +20,6 @@ class Config:
     # 0 threshold means that with only 1 frame with >1 person,
     # the video is considered as multiple people
     MULTIPLE_PEOPLE_THRESHOLD: float = 0.0
+    # Temporal solution parameters
+    TEMPORAL_WINDOW: int = 15
+    TEMPORAL_MIN_CONSECUTIVE: int = 3

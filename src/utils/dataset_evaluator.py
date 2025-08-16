@@ -36,6 +36,7 @@ class DatasetEvaluator:
         confidence_threshold: float = 0.5,
         device: str | None = None,
         backend: str = "yolov8",
+        solution: str = "counting",
         frame_sample_rate: int | None = None,
         max_frames: int | None = None,
         multiple_people_threshold: float | None = None,
@@ -62,10 +63,14 @@ class DatasetEvaluator:
         self.num_workers = max(1, int(num_workers))
         self.show_progress = bool(show_progress)
         self.backend = backend
+        self.solution = solution
 
         # Setup detector and load labels
         self.detector = PersonDetector(
-            model_size=model_size, device=device, backend=self.backend
+            model_size=model_size,
+            device=device,
+            backend=self.backend,
+            solution=self.solution,
         )
 
         # Apply overrides directly to detector config
@@ -212,6 +217,7 @@ class DatasetEvaluator:
                     model_size=self.model_size,
                     device=self.device,
                     backend=self.backend,
+                    solution=self.solution,
                 )
                 # Apply overrides
                 if self.frame_sample_rate is not None:

@@ -25,6 +25,7 @@ def run_webcam_demo(
     threshold: float,
     sample_rate: int,
     show_confidence: bool,
+    solution: str = "counting",
 ) -> int:
     """Run a real-time webcam demo.
 
@@ -45,6 +46,7 @@ def run_webcam_demo(
         model_size=model_size,
         device=device,
         backend=backend,
+        solution=solution,
     )
 
     logger.info(f"Opening camera index {camera_index}...")
@@ -69,7 +71,10 @@ def run_webcam_demo(
             detections = []
             if frame_idx % max(1, int(sample_rate)) == 0:
                 try:
-                    detections = detector.backend.predict_persons(frame, threshold)
+                    # Use backend for drawing; video decision uses solution
+                    detections = detector.backend.predict_persons(
+                        frame, threshold
+                    )
                 except Exception as det_err:  # pragma: no cover (timing dependent)
                     logger.error(f"Error during detection: {det_err}")
                     detections = []

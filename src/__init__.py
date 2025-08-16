@@ -1,1 +1,3 @@
-# Multi-person detection package
+"""Multi-person detection package."""
+
+__all__ = []

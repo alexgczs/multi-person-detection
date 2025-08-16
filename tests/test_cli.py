@@ -31,7 +31,9 @@ class TestCLI(unittest.TestCase):
                 video_path = f.name
 
             try:
-                result = self.runner.invoke(cli, ["predict", "-i", video_path])
+                result = self.runner.invoke(
+                    cli, ["predict", "-i", video_path, "--solution", "counting"]
+                )
                 self.assertEqual(result.exit_code, 0)
                 self.assertIn("label predicted: 1", result.output)
             finally:
@@ -48,7 +50,9 @@ class TestCLI(unittest.TestCase):
                 video_path = f.name
 
             try:
-                result = self.runner.invoke(cli, ["predict", "-i", video_path])
+                result = self.runner.invoke(
+                    cli, ["predict", "-i", video_path, "--solution", "temporal"]
+                )
                 self.assertEqual(result.exit_code, 0)
                 self.assertIn("label predicted: 0", result.output)
             finally:
@@ -95,6 +99,7 @@ class TestCLI(unittest.TestCase):
                         "predict",
                         "-i", video_path,
                         "--backend", "torchvision_ssd",
+                        "--solution", "counting",
                     ]
                 )
                 self.assertEqual(result.exit_code, 0)
@@ -161,6 +166,7 @@ class TestCLI(unittest.TestCase):
                             "--num-workers",
                             "1",
                             "--no-progress",
+                            "--solution", "temporal",
                         ],
                     )
 
@@ -235,6 +241,7 @@ class TestCLI(unittest.TestCase):
                             "--no-progress",
                             "--backend",
                             "opencv_hog",
+                            "--solution", "counting",
                         ],
                     )
 
@@ -281,6 +288,7 @@ class TestCLI(unittest.TestCase):
                         labels_file,
                         "--no-report",
                         "--no-progress",
+                        "--solution", "counting",
                     ],
                 )
 

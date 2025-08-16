@@ -15,6 +15,9 @@ from loguru import logger
 
 from src.utils.config import Config
 from src.utils.video_processor import VideoProcessor
+from src.solutions.base import BaseSolution
+from src.solutions.counting import CountingSolution
+from src.solutions.temporal import TemporalHysteresisSolution
 
 from src.models.backends import (
     OpenCVHOGBackend,
@@ -39,6 +42,7 @@ class PersonDetector:
         model_size: str = "n",
         device: Optional[str] = None,
         backend: str = "yolov8",
+        solution: str = "counting",
     ):
         """
         Initialize the person detector.
@@ -50,11 +54,13 @@ class PersonDetector:
         self.model_size = model_size
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.backend_name = backend
+        self.solution_name = solution
 
         # Initialize backend and utilities
         self.backend: PersonDetectionBackend = self._init_backend()
         self.video_processor = VideoProcessor()
         self.config = Config()
+        self.solution: BaseSolution = self._init_solution()
 
         logger.info(
             f"PersonDetector initialized with backend={self.backend_name}, "
@@ -76,6 +82,16 @@ class PersonDetector:
             "Unsupported backend '" + self.backend_name + "'. Supported: "
             "['yolov8', 'torchvision_frcnn', 'torchvision_ssd', "
             "'torchvision_retinanet', 'opencv_hog']",
+        )
+
+    def _init_solution(self) -> BaseSolution:
+        if self.solution_name == "counting":
+            return CountingSolution()
+        if self.solution_name == "temporal":
+            return TemporalHysteresisSolution()
+        raise ValueError(
+            "Unsupported solution '" + self.solution_name + "'. Supported: "
+            "['counting', 'temporal']",
         )
 
     def predict(self, video_path: str, confidence_threshold: float = 0.5) -> Dict:
@@ -102,7 +118,7 @@ class PersonDetector:
                 result["frame_index"] = i
                 frame_results.append(result)
 
-            final_result = self._aggregate_results(frame_results)
+            final_result = self.solution.aggregate(frame_results, self.config)
 
             logger.info(
                 f"Detection complete: {final_result['num_people']} people detected"
@@ -153,30 +169,4 @@ class PersonDetector:
         Returns:
             Aggregated result for the entire video
         """
-        # Count frames with multiple people
-        frames_with_multiple = sum(1 for r in frame_results if r["has_multiple_people"])
-        total_frames = len(frame_results)
-
-        # Calculate percentage of frames with multiple people
-        multiple_people_ratio = (
-            frames_with_multiple / total_frames if total_frames > 0 else 0
-        )
-
-        # Determine if video has multiple people based on threshold
-        has_multiple_people = (
-            multiple_people_ratio > self.config.MULTIPLE_PEOPLE_THRESHOLD
-        )
-
-        # Calculate average and max number of people across frames
-        avg_people = np.mean([r["num_people"] for r in frame_results])
-        max_people = max([r["num_people"] for r in frame_results])
-
-        return {
-            "has_multiple_people": has_multiple_people,
-            "num_people": int(round(avg_people)),
-            "max_people": max_people,
-            "multiple_people_ratio": multiple_people_ratio,
-            "frames_with_multiple": frames_with_multiple,
-            "total_frames": total_frames,
-            "frame_results": frame_results,
-        }
+        return CountingSolution().aggregate(frame_results, self.config)

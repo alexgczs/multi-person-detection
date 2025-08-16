@@ -45,7 +45,8 @@ python -m src.main predict -i path/to/video.mp4 \
   --device cuda \
   --sample-rate 1 \
   --max-frames 100 \
-  --people-threshold 0.2
+  --people-threshold 0.2 \
+  --solution counting   # or: temporal
 ```
 
 The output will be printed to stdout as `label predicted: 0` or `label predicted: 1`.
@@ -62,6 +63,7 @@ python -m src.main predict -i path/to/video.mp4 --threshold 0.7
 - **--threshold, -t**: Minimum confidence for person detections. Default: 0.5.
 - **--model-size**: Model size (only applied if backend is based on YOLO). Sizes: `n`, `s`, `m`, `l`, `x`. Default: `n`.
 - **--backend**: Detection backend. Supported: `yolov8`, `torchvision_frcnn`, `torchvision_ssd`, `torchvision_retinanet`, `opencv_hog`. Default: `yolov8`.
+- **--solution**: Video-level solution strategy. Supported: `counting`, `temporal` (hysteresis). Default: `counting`.
 - **--device**: Compute device (`cpu` or `cuda`). Default: auto-detect.
 - **--sample-rate**: Process every Nth frame (1 = every frame). Default: 1.
 - **--max-frames**: Maximum number of frames to process per video. Default: 100.
@@ -74,7 +76,8 @@ Evaluate the model on a complete dataset:
 ```bash
 python -m src.main evaluate -d path/to/dataset -l path/to/labels.txt \
   --threshold 0.5 --model-size n --device cuda \
-  --sample-rate 1 --max-frames 100 --people-threshold 0.2
+  --sample-rate 1 --max-frames 100 --people-threshold 0.2 \
+  --solution temporal
 ```
 
 This will:
@@ -140,6 +143,33 @@ This is useful for:
 3. **Aggregation**: The system counts how many frames contain multiple people
 4. **Decision**: If the ratio of frames with multiple people exceeds a threshold, the video is classified as containing multiple people
 
+## Solution strategies
+
+You can choose the video-level decision strategy with `--solution`:
+
+- **counting** (default):
+  - Computes the ratio of frames where more than one person is detected.
+  - Final decision: `has_multiple_people = (ratio > MULTIPLE_PEOPLE_THRESHOLD)`.
+  - Config parameter: `Config.MULTIPLE_PEOPLE_THRESHOLD` (default: 0.0). A value of 0.2–0.3 can be more robust.
+
+- **temporal** (hysteresis):
+  - Looks at the temporal sequence of per-frame decisions and activates multi‑person when there are at least `TEMPORAL_MIN_CONSECUTIVE` consecutive frames with multi‑person.
+  - Sticky behavior: once activated, the video is considered multi‑person for the rest of its duration.
+  - Config parameters: `Config.TEMPORAL_MIN_CONSECUTIVE` (default: 3), `Config.TEMPORAL_WINDOW` (reserved for future use).
+
+Examples:
+
+```bash
+# Counting (baseline)
+python -m src.main predict -i video.mp4 --solution counting --people-threshold 0.2
+
+# Temporal (hysteresis)
+python -m src.main predict -i video.mp4 --solution temporal
+
+# Evaluate a dataset with the temporal strategy
+python -m src.main evaluate -d path/to/dataset -l labels.txt --solution temporal
+```
+
 ## Technical details
 
 - **Model**: YOLOv8n (nano) by default, but supports all sizes (n, s, m, l, x)
@@ -175,6 +205,10 @@ python -m src.main demo \
 src/
 ├── models/
 │   └── person_detector.py    # Main detection logic
+├── solutions/                # Video-level aggregation strategies
+│   ├── base.py               # Base solution interface
+│   ├── counting.py           # Default behavior
+│   └── temporal.py           # Temporal hysteresis solution
 ├── utils/
 │   ├── config.py            # Configuration management
 │   ├── dataset_evaluator.py # Dataset evaluation utilities

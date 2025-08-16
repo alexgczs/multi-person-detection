@@ -58,6 +58,12 @@ def cli(verbose: bool, log_level: str):
     ], case_sensitive=False),
     help="Detection backend to use",
 )
+@click.option(
+    "--solution",
+    default="counting",
+    type=click.Choice(["counting", "temporal"], case_sensitive=False),
+    help="Video-level solution strategy",
+)
 @click.option("--device", default=None, help="Computation device: cpu or cuda")
 @click.option("--sample-rate", default=None, type=int, help="Process every Nth frame")
 @click.option("--max-frames", default=None, type=int, help="Maximum frames per video")
@@ -72,6 +78,7 @@ def predict(
     threshold: float,
     model_size: str,
     backend: str,
+    solution: str,
     device: str | None,
     sample_rate: int | None,
     max_frames: int | None,
@@ -86,7 +93,12 @@ def predict(
 
         # Setup detector and process video
         logger.info("Initializing person detector...")
-        detector = PersonDetector(model_size=model_size, device=device, backend=backend)
+        detector = PersonDetector(
+            model_size=model_size,
+            device=device,
+            backend=backend,
+            solution=solution,
+        )
         # Apply config overrides if provided
         if sample_rate is not None:
             detector.video_processor.config.FRAME_SAMPLE_RATE = int(sample_rate)
@@ -128,6 +140,12 @@ def predict(
     ], case_sensitive=False),
     help="Detection backend to use",
 )
+@click.option(
+    "--solution",
+    default="counting",
+    type=click.Choice(["counting", "temporal"], case_sensitive=False),
+    help="Video-level solution strategy",
+)
 @click.option("--device", default=None, help="Computation device: cpu or cuda")
 @click.option("--sample-rate", default=None, type=int, help="Process every Nth frame")
 @click.option("--max-frames", default=None, type=int, help="Maximum frames per video")
@@ -164,6 +182,7 @@ def evaluate(
     threshold: float,
     model_size: str,
     backend: str,
+    solution: str,
     device: str | None,
     sample_rate: int | None,
     max_frames: int | None,
@@ -205,6 +224,7 @@ def evaluate(
             confidence_threshold=threshold,
             device=device,
             backend=backend,
+            solution=solution,
             frame_sample_rate=sample_rate,
             max_frames=max_frames,
             multiple_people_threshold=people_threshold,
@@ -338,6 +358,12 @@ def report(results_file: str, output_file: str):
 @click.option("--sample-rate", default=1, type=int,
               help="Process every Nth frame (1 = all)")
 @click.option(
+    "--solution",
+    default="counting",
+    type=click.Choice(["counting", "temporal"], case_sensitive=False),
+    help="Video-level solution strategy",
+)
+@click.option(
     "--show-confidence/--no-show-confidence",
     default=True,
     help="Draw confidence on boxes",
@@ -349,17 +375,19 @@ def demo(
     device: str | None,
     threshold: float,
     sample_rate: int,
+    solution: str,
     show_confidence: bool,
 ):
     """Run a real-time webcam demo drawing detected persons and counts."""
     exit_code = run_webcam_demo(
-        camera_index,
-        backend,
-        model_size,
-        device,
-        threshold,
-        sample_rate,
-        show_confidence,
+        camera_index=camera_index,
+        backend=backend,
+        model_size=model_size,
+        device=device,
+        threshold=threshold,
+        sample_rate=sample_rate,
+        show_confidence=show_confidence,
+        solution=solution,
     )
     sys.exit(exit_code)
 
