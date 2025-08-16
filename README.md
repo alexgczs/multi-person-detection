@@ -1,5 +1,8 @@
 # Multi-person detection for identity verification
 
+[![Build](https://github.com/alexgczs/multi-person-detection/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/alexgczs/multi-person-detection/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/alexgczs/multi-person-detection/branch/master/graph/badge.svg)](https://codecov.io/gh/alexgczs/multi-person-detection)
+
 This project addresses the fraud detection challenge of detecting when multiple people are present during a verification session (could indicate coercion or fraud).
 
 ## Current status
@@ -181,6 +184,8 @@ pytest --cov=src
 - [ ] Training pipeline for fit models to the task
 - [ ] Analysis
 - [ ] Extras (depending on the time)
+- [ ] Console script (CLI, entry point) -> toml
+- [ ] MakeFile
 - [ ] Report
 - [ ] Next steps with more time and data
 
