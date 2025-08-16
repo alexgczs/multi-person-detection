@@ -43,7 +43,19 @@ def cli(verbose: bool, log_level: str):
 @click.option(
     "--threshold", "-t", default=0.5, help="Confidence threshold for detection"
 )
-@click.option("--model-size", default="n", help="YOLO model size (n, s, m, l, x)")
+@click.option("--model-size", default="n", help="Model size for the selected backend")
+@click.option(
+    "--backend",
+    default="yolov8",
+    type=click.Choice([
+        "yolov8",
+        "torchvision_frcnn",
+        "torchvision_ssd",
+        "torchvision_retinanet",
+        "opencv_hog",
+    ], case_sensitive=False),
+    help="Detection backend to use",
+)
 @click.option("--device", default=None, help="Computation device: cpu or cuda")
 @click.option("--sample-rate", default=None, type=int, help="Process every Nth frame")
 @click.option("--max-frames", default=None, type=int, help="Maximum frames per video")
@@ -57,6 +69,7 @@ def predict(
     video: str,
     threshold: float,
     model_size: str,
+    backend: str,
     device: str | None,
     sample_rate: int | None,
     max_frames: int | None,
@@ -71,7 +84,7 @@ def predict(
 
         # Setup detector and process video
         logger.info("Initializing person detector...")
-        detector = PersonDetector(model_size=model_size, device=device)
+        detector = PersonDetector(model_size=model_size, device=device, backend=backend)
         # Apply config overrides if provided
         if sample_rate is not None:
             detector.video_processor.config.FRAME_SAMPLE_RATE = int(sample_rate)
@@ -100,7 +113,19 @@ def predict(
 @click.option(
     "--threshold", "-t", default=0.5, help="Confidence threshold for detection"
 )
-@click.option("--model-size", default="n", help="YOLO model size (n, s, m, l, x)")
+@click.option("--model-size", default="n", help="Model size for the selected backend")
+@click.option(
+    "--backend",
+    default="yolov8",
+    type=click.Choice([
+        "yolov8",
+        "torchvision_frcnn",
+        "torchvision_ssd",
+        "torchvision_retinanet",
+        "opencv_hog",
+    ], case_sensitive=False),
+    help="Detection backend to use",
+)
 @click.option("--device", default=None, help="Computation device: cpu or cuda")
 @click.option("--sample-rate", default=None, type=int, help="Process every Nth frame")
 @click.option("--max-frames", default=None, type=int, help="Maximum frames per video")
@@ -136,6 +161,7 @@ def evaluate(
     labels_file: str,
     threshold: float,
     model_size: str,
+    backend: str,
     device: str | None,
     sample_rate: int | None,
     max_frames: int | None,
@@ -176,6 +202,7 @@ def evaluate(
             model_size=model_size,
             confidence_threshold=threshold,
             device=device,
+            backend=backend,
             frame_sample_rate=sample_rate,
             max_frames=max_frames,
             multiple_people_threshold=people_threshold,

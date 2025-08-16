@@ -1,7 +1,10 @@
 """
-Person detection model using YOLOv8.
+Person detector that aggregates frame-level detections from pluggable backends.
 
-Detects multiple people in video frames.
+This class orchestrates frame extraction and delegates per-frame person
+detections to a selected backend. The aggregation logic computes simple
+statistics (counts and ratios) to decide whether a video likely contains
+multiple persons.
 """
 
 from typing import Dict, List, Optional
@@ -9,10 +12,18 @@ from typing import Dict, List, Optional
 import numpy as np
 import torch
 from loguru import logger
-from ultralytics import YOLO
 
 from src.utils.config import Config
 from src.utils.video_processor import VideoProcessor
+
+from src.models.backends import (
+    OpenCVHOGBackend,
+    PersonDetectionBackend,
+    TorchvisionFRCNNBackend,
+    TorchvisionRetinaNetBackend,
+    TorchvisionSSDBackend,
+    YoloV8Backend,
+)
 
 
 class PersonDetector:
@@ -23,7 +34,12 @@ class PersonDetector:
     logic to determine if multiple people are present in a video.
     """
 
-    def __init__(self, model_size: str = "n", device: Optional[str] = None):
+    def __init__(
+        self,
+        model_size: str = "n",
+        device: Optional[str] = None,
+        backend: str = "yolov8",
+    ):
         """
         Initialize the person detector.
 
@@ -33,34 +49,36 @@ class PersonDetector:
         """
         self.model_size = model_size
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.backend_name = backend
 
-        # Load model and setup
-        self.model = self._load_model()
+        # Initialize backend and utilities
+        self.backend: PersonDetectionBackend = self._init_backend()
         self.video_processor = VideoProcessor()
         self.config = Config()
 
-        logger.info(f"PersonDetector initialized with model size: {model_size}")
-        logger.info(f"Using device: {self.device}")
+        logger.info(
+            "PersonDetector initialized with backend=%s, model size=%s, device=%s",
+            self.backend_name,
+            model_size,
+            self.device,
+        )
 
-    def _load_model(self) -> YOLO:
-        """Load YOLO model."""
-        try:
-            model_name = f"yolov8{self.model_size}.pt"
-            model = YOLO(model_name)
-            # Ensure model runs on the requested device
-            try:
-                model.to(self.device)
-                logger.info(f"Moved YOLO model to device: {self.device}")
-            except Exception as e:
-                logger.warning(
-                    f"Could not move model to device '{self.device}': {e}. "
-                    "Using default device."
-                )
-            logger.info(f"Loaded YOLO model: {model_name}")
-            return model
-        except Exception as e:
-            logger.error(f"Error loading YOLO model: {e}")
-            raise
+    def _init_backend(self) -> PersonDetectionBackend:
+        if self.backend_name == "yolov8":
+            return YoloV8Backend(self.model_size, self.device)
+        if self.backend_name == "torchvision_frcnn":
+            return TorchvisionFRCNNBackend(self.device)
+        if self.backend_name == "torchvision_ssd":
+            return TorchvisionSSDBackend(self.device)
+        if self.backend_name == "torchvision_retinanet":
+            return TorchvisionRetinaNetBackend(self.device)
+        if self.backend_name == "opencv_hog":
+            return OpenCVHOGBackend(self.device)
+        raise ValueError(
+            "Unsupported backend '" + self.backend_name + "'. Supported: "
+            "['yolov8', 'torchvision_frcnn', 'torchvision_ssd', "
+            "'torchvision_retinanet', 'opencv_hog']",
+        )
 
     def predict(self, video_path: str, confidence_threshold: float = 0.5) -> Dict:
         """
@@ -111,27 +129,10 @@ class PersonDetector:
             Dictionary containing detection results for the frame
         """
         try:
-            # Run YOLO detection
-            results = self.model(frame, verbose=False, device=self.device)
-
-            # Filter for person detections (class 0 in COCO dataset)
-            person_detections = []
-            for result in results:
-                boxes = result.boxes
-                if boxes is not None:
-                    for box in boxes:
-                        # Check if detection is a person (class 0)
-                        if (
-                            int(box.cls) == 0
-                            and float(box.conf) >= confidence_threshold
-                        ):
-                            person_detections.append(
-                                {
-                                    "bbox": box.xyxy[0].cpu().numpy(),
-                                    "confidence": float(box.conf),
-                                    "class": int(box.cls),
-                                }
-                            )
+            # Run backend detection for person class
+            person_detections = self.backend.predict_persons(
+                frame, confidence_threshold
+            )
 
             return {
                 "num_people": len(person_detections),
@@ -168,7 +169,7 @@ class PersonDetector:
             multiple_people_ratio > self.config.MULTIPLE_PEOPLE_THRESHOLD
         )
 
-        # Calculate average number of people across frames
+        # Calculate average and max number of people across frames
         avg_people = np.mean([r["num_people"] for r in frame_results])
         max_people = max([r["num_people"] for r in frame_results])
 

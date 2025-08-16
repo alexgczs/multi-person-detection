@@ -1,7 +1,8 @@
 """
 Unit tests for the PersonDetector class.
 
-This module contains the tests for all the features of the PersonDetector class.
+These tests focus on orchestration (frame processing and aggregation). Model-specific
+logic is covered in backend tests.
 """
 
 import os
@@ -46,110 +47,134 @@ class TestPersonDetector(unittest.TestCase):
         # Configure mock model
         self.mock_model.return_value = [self.mock_result]
 
-    @patch("src.models.person_detector.YOLO")
-    def test_initialization(self, mock_yolo):
-        """Test PersonDetector initialization."""
-        mock_yolo.return_value = self.mock_model
+    @patch("src.models.person_detector.YoloV8Backend")
+    def test_initialization(self, mock_backend):
+        """PersonDetector initializes the chosen backend via interface."""
+        fake_backend = Mock()
+        mock_backend.return_value = fake_backend
 
-        detector = PersonDetector(model_size="n")
+        detector = PersonDetector(model_size="n", backend="yolov8")
 
         self.assertEqual(detector.model_size, "n")
-        self.assertIsNotNone(detector.model)
-        mock_yolo.assert_called_once_with("yolov8n.pt")
+        # Only backend interface is guaranteed
+        self.assertIs(detector.backend, fake_backend)
+        mock_backend.assert_called_once()
 
-    @patch("src.models.person_detector.YOLO")
-    def test_model_loading_error(self, mock_yolo):
-        """Test handling of model loading errors."""
-        mock_yolo.side_effect = Exception("Model loading failed")
+    @patch("src.models.person_detector.YoloV8Backend")
+    def test_process_frame_delegates_to_backend(self, mock_backend):
+        """_process_frame delegates to backend.predict_persons and maps outputs."""
+        fake_backend = Mock()
+        fake_backend.predict_persons.return_value = [
+            {"bbox": [0, 0, 1, 1], "confidence": 0.9, "class": 0}
+        ]
+        mock_backend.return_value = fake_backend
 
-        with self.assertRaises(Exception):
-            PersonDetector(model_size="n")
-
-    @patch("src.models.person_detector.YOLO")
-    def test_process_frame_single_person(self, mock_yolo):
-        """Test processing a frame with a single person."""
-        mock_yolo.return_value = self.mock_model
-
-        detector = PersonDetector(model_size="n")
-
-        # Create a test frame
-        frame = np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8)
-
+        detector = PersonDetector(backend="yolov8")
+        frame = np.zeros((480, 640, 3), dtype=np.uint8)
         result = detector._process_frame(frame, confidence_threshold=0.5)
-
         self.assertEqual(result["num_people"], 1)
         self.assertFalse(result["has_multiple_people"])
         self.assertEqual(len(result["detections"]), 1)
 
-    @patch("src.models.person_detector.YOLO")
-    def test_process_frame_multiple_people(self, mock_yolo):
-        """Test processing a frame with multiple people."""
-        mock_yolo.return_value = self.mock_model
+    @patch("src.models.person_detector.YoloV8Backend")
+    def test_process_frame_multiple_people_via_backend(self, mock_backend):
+        """Multiple detections from backend should yield has_multiple_people=True."""
+        fake_backend = Mock()
+        fake_backend.predict_persons.return_value = [
+            {"bbox": [0, 0, 1, 1], "confidence": 0.9, "class": 0},
+            {"bbox": [2, 2, 3, 3], "confidence": 0.8, "class": 0},
+        ]
+        mock_backend.return_value = fake_backend
 
-        # Create a second person detection
-        mock_box2 = Mock()
-        mock_box2.cls = torch.tensor([0])
-        mock_box2.conf = torch.tensor([0.7])
-        mock_box2.xyxy = torch.tensor([[300, 100, 400, 300]])
-
-        # Update mock boxes to include two people
-        self.mock_boxes.__iter__ = lambda x: iter([self.mock_box, mock_box2])
-
-        detector = PersonDetector(model_size="n")
-
-        # Create a test frame
-        frame = np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8)
-
+        detector = PersonDetector(backend="yolov8")
+        frame = np.zeros((480, 640, 3), dtype=np.uint8)
         result = detector._process_frame(frame, confidence_threshold=0.5)
-
         self.assertEqual(result["num_people"], 2)
         self.assertTrue(result["has_multiple_people"])
         self.assertEqual(len(result["detections"]), 2)
 
-    @patch("src.models.person_detector.YOLO")
-    def test_process_frame_no_people(self, mock_yolo):
-        """Test processing a frame with no people."""
-        mock_yolo.return_value = self.mock_model
+    @patch("src.models.person_detector.YoloV8Backend")
+    def test_backend_initialization_error(self, mock_backend):
+        """Initialization should propagate backend construction errors."""
+        mock_backend.side_effect = Exception("Backend init failed")
+        with self.assertRaises(Exception):
+            PersonDetector(model_size="n", backend="yolov8")
 
-        # Configure mock to return no detections
-        self.mock_boxes.__iter__ = lambda x: iter([])
+    @patch("src.models.person_detector.YoloV8Backend")
+    def test_process_frame_no_people(self, mock_backend):
+        """No detections from backend should map to zero people."""
+        fake_backend = Mock()
+        fake_backend.predict_persons.return_value = []
+        mock_backend.return_value = fake_backend
 
-        detector = PersonDetector(model_size="n")
-
-        # Create a test frame
+        detector = PersonDetector(backend="yolov8")
         frame = np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8)
-
         result = detector._process_frame(frame, confidence_threshold=0.5)
-
         self.assertEqual(result["num_people"], 0)
         self.assertFalse(result["has_multiple_people"])
         self.assertEqual(len(result["detections"]), 0)
 
-    @patch("src.models.person_detector.YOLO")
-    def test_process_frame_low_confidence(self, mock_yolo):
-        """Test processing a frame with low confidence detections."""
-        mock_yolo.return_value = self.mock_model
+    # The remaining aggregation tests stay the same
 
-        # Set low confidence
-        self.mock_box.conf = torch.tensor([0.3])
+    @patch("src.models.person_detector.YoloV8Backend")
+    @patch("src.models.person_detector.VideoProcessor")
+    def test_predict_integration(self, mock_video_processor, mock_backend):
+        """Test the complete predict method integration."""
+        fake_backend = Mock()
+        fake_backend.predict_persons.return_value = []
+        mock_backend.return_value = fake_backend
+
+        # Mock video processor
+        mock_processor = Mock()
+        mock_processor.extract_frames.return_value = [
+            np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8),
+            np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8),
+        ]
+        mock_video_processor.return_value = mock_processor
+
+        detector = PersonDetector(model_size="n", backend="yolov8")
+
+        # Create a temporary video file path
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
+            video_path = f.name
+
+        try:
+            result = detector.predict(video_path, confidence_threshold=0.5)
+
+            self.assertIn("has_multiple_people", result)
+            self.assertIn("num_people", result)
+            self.assertIn("multiple_people_ratio", result)
+
+        finally:
+            # Clean up
+            if os.path.exists(video_path):
+                os.unlink(video_path)
+
+    @patch("src.models.person_detector.YoloV8Backend")
+    @patch("src.models.person_detector.VideoProcessor")
+    def test_predict_raises_on_extract_error(self, mock_video_processor, mock_backend):
+        """Predict should propagate exceptions from frame extraction."""
+        fake_backend = Mock()
+        fake_backend.predict_persons.return_value = []
+        mock_backend.return_value = fake_backend
+
+        mock_processor = Mock()
+        mock_processor.extract_frames.side_effect = ValueError("boom")
+        mock_video_processor.return_value = mock_processor
 
         detector = PersonDetector(model_size="n")
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
+            video_path = f.name
+        try:
+            with self.assertRaises(ValueError):
+                detector.predict(video_path, confidence_threshold=0.5)
+        finally:
+            if os.path.exists(video_path):
+                os.unlink(video_path)
 
-        # Create a test frame
-        frame = np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8)
-
-        result = detector._process_frame(frame, confidence_threshold=0.5)
-
-        self.assertEqual(result["num_people"], 0)
-        self.assertFalse(result["has_multiple_people"])
-        self.assertEqual(len(result["detections"]), 0)
-
-    @patch("src.models.person_detector.YOLO")
-    def test_aggregate_results_single_person(self, mock_yolo):
+    def test_aggregate_results_single_person(self):
         """Test aggregating results for single person video."""
-        mock_yolo.return_value = self.mock_model
-
-        detector = PersonDetector(model_size="n")
+        detector = PersonDetector(model_size="n", backend="yolov8")
 
         # Create frame results for single person
         frame_results = [
@@ -168,12 +193,9 @@ class TestPersonDetector(unittest.TestCase):
         self.assertEqual(result["frames_with_multiple"], 0)
         self.assertEqual(result["total_frames"], 5)
 
-    @patch("src.models.person_detector.YOLO")
-    def test_aggregate_results_multiple_people(self, mock_yolo):
+    def test_aggregate_results_multiple_people(self):
         """Test aggregating results for multiple people video."""
-        mock_yolo.return_value = self.mock_model
-
-        detector = PersonDetector(model_size="n")
+        detector = PersonDetector(model_size="n", backend="yolov8")
 
         # Create frame results for multiple people
         frame_results = [
@@ -191,72 +213,6 @@ class TestPersonDetector(unittest.TestCase):
         self.assertEqual(result["multiple_people_ratio"], 0.6)
         self.assertEqual(result["frames_with_multiple"], 3)
         self.assertEqual(result["total_frames"], 5)
-
-    @patch("src.models.person_detector.YOLO")
-    @patch("src.models.person_detector.VideoProcessor")
-    def test_predict_integration(self, mock_video_processor, mock_yolo):
-        """Test the complete predict method integration."""
-        mock_yolo.return_value = self.mock_model
-
-        # Mock video processor
-        mock_processor = Mock()
-        mock_processor.extract_frames.return_value = [
-            np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8),
-            np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8),
-        ]
-        mock_video_processor.return_value = mock_processor
-
-        detector = PersonDetector(model_size="n")
-
-        # Create a temporary video file path
-        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
-            video_path = f.name
-
-        try:
-            result = detector.predict(video_path, confidence_threshold=0.5)
-
-            self.assertIn("has_multiple_people", result)
-            self.assertIn("num_people", result)
-            self.assertIn("multiple_people_ratio", result)
-
-        finally:
-            # Clean up
-            if os.path.exists(video_path):
-                os.unlink(video_path)
-
-    @patch("src.models.person_detector.YOLO")
-    @patch("src.models.person_detector.VideoProcessor")
-    def test_predict_raises_on_extract_error(self, mock_video_processor, mock_yolo):
-        """Predict should propagate exceptions from frame extraction."""
-        mock_yolo.return_value = self.mock_model
-
-        mock_processor = Mock()
-        mock_processor.extract_frames.side_effect = ValueError("boom")
-        mock_video_processor.return_value = mock_processor
-
-        detector = PersonDetector(model_size="n")
-        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
-            video_path = f.name
-        try:
-            with self.assertRaises(ValueError):
-                detector.predict(video_path, confidence_threshold=0.5)
-        finally:
-            if os.path.exists(video_path):
-                os.unlink(video_path)
-
-    @patch("src.models.person_detector.YOLO")
-    def test_process_frame_exception_path(self, mock_yolo):
-        """_process_frame returns default result if model call fails."""
-        # Configure model to raise when called
-        failing_model = Mock()
-        failing_model.side_effect = Exception("inference failed")
-        mock_yolo.return_value = failing_model
-
-        detector = PersonDetector(model_size="n")
-        frame = np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8)
-        result = detector._process_frame(frame, confidence_threshold=0.5)
-        self.assertEqual(result["num_people"], 0)
-        self.assertFalse(result["has_multiple_people"])
 
 
 if __name__ == "__main__":

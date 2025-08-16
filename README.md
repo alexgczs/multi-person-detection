@@ -60,7 +60,8 @@ python -m src.main predict -i path/to/video.mp4 --threshold 0.7
 
 - **--video, -i**: Path to the input video file. Required.
 - **--threshold, -t**: Minimum confidence for person detections. Default: 0.5.
-- **--model-size**: YOLO model size to use (`n`, `s`, `m`, `l`, `x`). Default: `n`.
+- **--model-size**: Model size (only applied if backend is based on YOLO). Sizes: `n`, `s`, `m`, `l`, `x`. Default: `n`.
+- **--backend**: Detection backend. Supported: `yolov8`, `torchvision_frcnn`, `torchvision_ssd`, `torchvision_retinanet`, `opencv_hog`. Default: `yolov8`.
 - **--device**: Compute device (`cpu` or `cuda`). Default: auto-detect.
 - **--sample-rate**: Process every Nth frame (1 = every frame). Default: 1.
 - **--max-frames**: Maximum number of frames to process per video. Default: 100.
@@ -103,7 +104,8 @@ python -m src.main evaluate -d path/to/dataset -l path/to/labels.txt --no-report
 #### Options
 
 - **--threshold, -t**: Minimum confidence for person detections. Default: 0.5.
-- **--model-size**: YOLO model size to use (`n`, `s`, `m`, `l`, `x`). Default: `n`.
+- **--model-size**: Model size for the selected backend (YOLO sizes: `n`, `s`, `m`, `l`, `x`). Default: `n`.
+- **--backend**: Detection backend. Supported: `yolov8`, `torchvision_frcnn`, `torchvision_ssd`, `torchvision_retinanet`, `opencv_hog`. Default: `yolov8`.
 - **--device**: Compute device (`cpu` or `cuda`). Default: auto-detect.
 - **--sample-rate**: Process every Nth frame (1 = every frame). Default: 1.
 - **--max-frames**: Maximum number of frames to process per video. Default: 100.
@@ -180,7 +182,7 @@ pytest --cov=src
 - [x] Inference pipeline (logic of detect multiple persons)
 - [x] Performance evaluation on the provided dataset
 - [x] Technical report generation
-- [ ] Generalization of models
+- [x] Generalization of models
 - [ ] Training pipeline for fit models to the task
 - [ ] Analysis
 - [ ] Extras (depending on the time)

@@ -79,6 +79,32 @@ class TestCLI(unittest.TestCase):
             finally:
                 os.unlink(video_path)
 
+    def test_cli_predict_with_backend_choice(self):
+        """Predict should pass backend choice to PersonDetector."""
+        with patch("src.main.PersonDetector") as mock_detector_class:
+            mock_detector = Mock()
+            mock_detector.predict.return_value = {"has_multiple_people": True}
+            mock_detector_class.return_value = mock_detector
+
+            with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
+                video_path = f.name
+
+            try:
+                result = self.runner.invoke(
+                    cli, [
+                        "predict",
+                        "-i", video_path,
+                        "--backend", "torchvision_ssd",
+                    ]
+                )
+                self.assertEqual(result.exit_code, 0)
+                mock_detector_class.assert_called_once()
+                # Ensure backend argument propagated
+                called_kwargs = mock_detector_class.call_args.kwargs
+                self.assertEqual(called_kwargs.get("backend"), "torchvision_ssd")
+            finally:
+                os.unlink(video_path)
+
     def test_cli_predict_detector_init_error(self):
         """Test predict command when detector initialization fails."""
         with patch("src.main.PersonDetector", side_effect=Exception("Init error")):
@@ -207,11 +233,17 @@ class TestCLI(unittest.TestCase):
                             "-o",
                             "custom_output",
                             "--no-progress",
+                            "--backend",
+                            "opencv_hog",
                         ],
                     )
 
                     self.assertEqual(result.exit_code, 0)
                     self.assertIn("DATASET EVALUATION RESULTS", result.output)
+                    # Check backend propagated to evaluator
+                    mock_evaluator_class.assert_called_once()
+                    called_kwargs = mock_evaluator_class.call_args.kwargs
+                    self.assertEqual(called_kwargs.get("backend"), "opencv_hog")
 
     def test_cli_evaluate_no_report(self):
         """Test evaluate command with --no-report flag."""

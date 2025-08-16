@@ -55,6 +55,7 @@ class TestDatasetEvaluator(unittest.TestCase):
                 model_size="n",
                 confidence_threshold=0.5,
                 num_workers=1,
+                backend="torchvision_frcnn",
             )
 
             self.assertEqual(evaluator.dataset_path, self.dataset_path)
@@ -62,6 +63,10 @@ class TestDatasetEvaluator(unittest.TestCase):
             self.assertEqual(evaluator.model_size, "n")
             self.assertEqual(evaluator.confidence_threshold, 0.5)
             self.assertEqual(len(evaluator.ground_truth), 4)
+            # backend wired
+            mock_detector_class.assert_called_once()
+            called_kwargs = mock_detector_class.call_args.kwargs
+            self.assertEqual(called_kwargs.get("backend"), "torchvision_frcnn")
 
     def test_load_labels(self):
         """Test label loading functionality."""
