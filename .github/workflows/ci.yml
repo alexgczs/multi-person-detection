@@ -53,13 +53,14 @@ jobs:
       # Upload coverage to Codecov
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.11'
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: coverage.xml
           flags: unittests
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
           verbose: true
+          root: ./
 
       # HTML is already generated above; artifacts only for 3.11
 
