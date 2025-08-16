@@ -1,7 +1,7 @@
 # Multi-person detection for identity verification
 
 [![Build](https://github.com/alexgczs/multi-person-detection/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/alexgczs/multi-person-detection/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/alexgczs/multi-person-detection/branch/master/graph/badge.svg)](https://codecov.io/gh/alexgczs/multi-person-detection)
+[![codecov](https://codecov.io/gh/alexgczs/multi-person-detection/graph/badge.svg)](https://codecov.io/gh/alexgczs/multi-person-detection)
 
 This project addresses the fraud detection challenge of detecting when multiple people are present during a verification session (could indicate coercion or fraud).
 
@@ -34,9 +34,9 @@ pip install -r requirements.txt
 
 ### Usage
 
-### Unique prediction
+### Single prediction
 
-Get a prediction over one unique video:
+Get a prediction over one single video:
 
 ```bash
 python -m src.main predict -i path/to/video.mp4 \

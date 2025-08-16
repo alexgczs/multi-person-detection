@@ -47,6 +47,15 @@ class PersonDetector:
         try:
             model_name = f"yolov8{self.model_size}.pt"
             model = YOLO(model_name)
+            # Ensure model runs on the requested device
+            try:
+                model.to(self.device)
+                logger.info(f"Moved YOLO model to device: {self.device}")
+            except Exception as e:
+                logger.warning(
+                    f"Could not move model to device '{self.device}': {e}. "
+                    "Using default device."
+                )
             logger.info(f"Loaded YOLO model: {model_name}")
             return model
         except Exception as e:
@@ -103,7 +112,7 @@ class PersonDetector:
         """
         try:
             # Run YOLO detection
-            results = self.model(frame, verbose=False)
+            results = self.model(frame, verbose=False, device=self.device)
 
             # Filter for person detections (class 0 in COCO dataset)
             person_detections = []
