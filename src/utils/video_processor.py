@@ -56,10 +56,8 @@ class VideoProcessor:
             duration = total_frames / fps if fps > 0 else 0
 
             logger.info(
-                "Video properties: %s frames, %.2f fps, %.2fs",
-                total_frames,
-                fps,
-                duration,
+                f"Video properties: {total_frames} frames, {fps:.2f} fps, "
+                f"{duration:.2f}s"
             )
 
             # Extract frames

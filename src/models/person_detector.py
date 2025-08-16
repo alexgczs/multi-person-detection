@@ -57,10 +57,8 @@ class PersonDetector:
         self.config = Config()
 
         logger.info(
-            "PersonDetector initialized with backend=%s, model size=%s, device=%s",
-            self.backend_name,
-            model_size,
-            self.device,
+            f"PersonDetector initialized with backend={self.backend_name}, "
+            f"model size={model_size}, device={self.device}"
         )
 
     def _init_backend(self) -> PersonDetectionBackend:

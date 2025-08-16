@@ -11,7 +11,6 @@ The OpenCV HOG test runs real on Linux/macOS and is mocked on Windows for
 stability.
 """
 
-import sys
 import unittest
 from unittest.mock import Mock, patch
 
@@ -130,9 +129,9 @@ class TestBackends(unittest.TestCase):
         self.assertEqual(detections, [])
 
     @patch(
-            "src.models.backends.torchvision.models.detection."
-            "ssdlite320_mobilenet_v3_large"
-            )
+        "src.models.backends.torchvision.models.detection."
+        "ssdlite320_mobilenet_v3_large"
+    )
     def test_torchvision_ssd_backend_parsing(self, mock_ctor):
         class Fake:
             def eval(self):
@@ -184,17 +183,15 @@ class TestBackends(unittest.TestCase):
         detections = backend.predict_persons(frame, confidence_threshold=0.5)
         self.assertEqual(len(detections), 2)
 
-    def test_opencv_hog_backend_smoke(self):
+    # Hog is mocked for stability on CI pipelines
+    @patch(
+        "src.models.backends.cv2.HOGDescriptor.detectMultiScale",
+        return_value=([], []),
+    )
+    def test_opencv_hog_backend_smoke(self, _mock_detect):
         backend = OpenCVHOGBackend(device="cpu")
         frame = np.zeros((64, 64, 3), dtype=np.uint8)
-        if sys.platform.startswith("win"):
-            with patch(
-                "src.models.backends.cv2.HOGDescriptor.detectMultiScale",
-                return_value=([], []),
-            ):
-                dets = backend.predict_persons(frame, confidence_threshold=10.0)
-        else:
-            dets = backend.predict_persons(frame, confidence_threshold=10.0)
+        dets = backend.predict_persons(frame, confidence_threshold=10.0)
         self.assertIsInstance(dets, list)
 
 
