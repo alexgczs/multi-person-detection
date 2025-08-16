@@ -60,7 +60,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
           verbose: true
-          root: ./
+          root_dir: ./
 
       # HTML is already generated above; artifacts only for 3.11
 
