@@ -5,6 +5,31 @@
 
 A system for detecting multiple people during identity verification sessions.
 
+## Table of contents
+
+- [Overview](#overview)
+- [Quick start](#quick-start)
+- [Usage](#usage)
+  - [Console scripts](#console-scripts-recommended)
+  - [Python module interface](#python-module-interface-alternative)
+  - [Single video prediction](#single-video-prediction)
+  - [Dataset evaluation](#dataset-evaluation)
+  - [Real-time demo](#real-time-demo)
+- [Solution strategies](#solution-strategies)
+  - [Counting strategy](#counting-strategy-default)
+  - [Temporal strategy](#temporal-strategy-hysteresis)
+  - [Card-aware strategy](#card-aware-strategy-temporal--id-filtering)
+- [Configuration](#configuration)
+  - [CLI parameters](#cli-parameters)
+  - [Environment variables](#environment-variables)
+  - [Default configuration](#default-configuration)
+- [Project structure](#project-structure)
+- [Development](#development)
+  - [Using Makefile](#using-makefile-recommended)
+  - [Using Python directly](#using-python-directly)
+- [Next steps](#next-steps)
+- [Notes](#notes)
+
 ## Overview
 
 This project addresses a fraud detection challenge: identifying when multiple people are present during a verification session, which could indicate coercion or fraudulent behavior. The system processes video streams and outputs binary labels (0 = single person, 1 = multiple people).
