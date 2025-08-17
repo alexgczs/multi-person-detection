@@ -29,6 +29,9 @@ class Config:
     FRAME_WIDTH: int = 640
     FRAME_HEIGHT: int = 480
 
+    # Person detection confidence threshold
+    PERSON_CONFIDENCE_THRESHOLD: float = 0.5
+
     # Decision threshold, ratio of frames with >1 person
     # 0 threshold means that with only 1 frame with >1 person,
     # the video is considered as multiple people
@@ -60,6 +63,10 @@ class Config:
         if env_val := os.getenv('MULTI_DETECT_FRAME_HEIGHT'):
             self.FRAME_HEIGHT = int(env_val)
 
+        # Person detection confidence
+        if env_val := os.getenv('MULTI_DETECT_PERSON_CONFIDENCE_THRESHOLD'):
+            self.PERSON_CONFIDENCE_THRESHOLD = float(env_val)
+
         # Decision threshold
         if env_val := os.getenv('MULTI_DETECT_MULTIPLE_PEOPLE_THRESHOLD'):
             self.MULTIPLE_PEOPLE_THRESHOLD = float(env_val)
@@ -89,6 +96,7 @@ class Config:
             'MAX_FRAMES': self.MAX_FRAMES,
             'FRAME_WIDTH': self.FRAME_WIDTH,
             'FRAME_HEIGHT': self.FRAME_HEIGHT,
+            'PERSON_CONFIDENCE_THRESHOLD': self.PERSON_CONFIDENCE_THRESHOLD,
             'MULTIPLE_PEOPLE_THRESHOLD': self.MULTIPLE_PEOPLE_THRESHOLD,
             'TEMPORAL_MIN_CONSECUTIVE': self.TEMPORAL_MIN_CONSECUTIVE,
             'CARD_MIN_AREA_RATIO_TO_LARGEST': self.CARD_MIN_AREA_RATIO_TO_LARGEST,

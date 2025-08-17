@@ -101,17 +101,22 @@ class PersonDetector:
             "['counting', 'temporal', 'temporal_cardaware', 'temporal_textaware']",
         )
 
-    def predict(self, video_path: str, confidence_threshold: float = 0.5) -> Dict:
+    def predict(self, video_path: str,
+                confidence_threshold: float | None = None) -> Dict:
         """
         Predict whether a video contains multiple people.
 
         Args:
             video_path: Path to the input video file
-            confidence_threshold: Minimum confidence for person detection
+            confidence_threshold: Minimum confidence for
+            # person detection (uses config default if None)
 
         Returns:
             Dictionary containing prediction results
         """
+        # Use config default if not specified
+        if confidence_threshold is None:
+            confidence_threshold = self.config.PERSON_CONFIDENCE_THRESHOLD
         try:
             logger.info(f"Processing video: {video_path}")
 
