@@ -89,43 +89,18 @@ class TemporalCardAwareSolution(BaseSolution):
                 # Calculate ratio relative to largest face
                 ratio = area / first_face_area if first_face_area else 1.0
 
-                logger.debug(
-                    f"card-aware: frame={frame_idx} area={area:.1f} "
-                    f"largest_ref={first_face_area:.1f} ratio={ratio:.3f} "
-                    f"ar={aspect_ratio:.3f} tol={square_tolerance:.3f} "
-                    f"thresh={area_threshold:.3f}"
-                )
-
                 # Check if this looks like an ID card
                 is_small = ratio < area_threshold
                 is_near_square = abs(aspect_ratio - 1.0) <= square_tolerance
 
                 if is_small and is_near_square:
-                    logger.debug(
-                        f"card-aware: SUPPRESS ID-like detection -> "
-                        f"ratio={ratio:.3f} ar={aspect_ratio:.3f}"
-                    )
                     suppressed_count += 1
                 else:
-                    logger.debug(
-                        f"card-aware: KEEP detection -> ratio={ratio:.3f} "
-                        f"ar={aspect_ratio:.3f} (small={is_small},"
-                        f"square={is_near_square})"
-                    )
                     valid_detections.append(detection)
 
             # Count remaining detections after suppression
             adjusted_count = len(valid_detections)
             has_multiple = adjusted_count > 1
-
-            logger.debug(
-                f"card-aware: Suppressed {suppressed_count} ID-like detections -> "
-                f"adjusted={adjusted_count}"
-            )
-            logger.debug(
-                f"card-aware: frame={frame_idx} - has_multiple={has_multiple} "
-                f"(adjusted_count={adjusted_count})"
-            )
 
             processed_frames.append({
                 "has_multiple_people": has_multiple,
@@ -146,16 +121,8 @@ class TemporalCardAwareSolution(BaseSolution):
 
                 if not active and consecutive_count >= min_consecutive:
                     active = True
-                    logger.debug(
-                        f"card-aware: ACTIVATED at frame {frame_idx} "
-                        f"(consecutive={consecutive_count})"
-                    )
             else:
                 consecutive_count = 0
-                logger.debug(
-                    f"card-aware: frame {frame_idx} - reset consecutive "
-                    f"(adjusted_count={frame_data['adjusted_count']})"
-                )
 
         # Calculate final ratio for debugging
         total_frames = len(processed_frames)
@@ -163,15 +130,6 @@ class TemporalCardAwareSolution(BaseSolution):
             1 for f in processed_frames if f["has_multiple_people"]
         )
         final_ratio = frames_with_multiple / total_frames if total_frames > 0 else 0.0
-
-        logger.debug(
-            f"card-aware: Final stats - total_frames={total_frames}, "
-            f"frames_with_multiple={frames_with_multiple}, ratio={final_ratio:.3f}"
-        )
-        logger.debug(
-            f"card-aware: Temporal result - active={active}, "
-            f"max_consecutive={max_consecutive}"
-        )
 
         # Calculate average people count for compatibility
         total_people = sum(f["adjusted_count"] for f in processed_frames)
