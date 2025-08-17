@@ -12,7 +12,7 @@ class TemporalHysteresisSolution(BaseSolution):
     Rules:
     - Build a boolean sequence b_t = has_multiple_people per frame
     - Activate multi-person if there are at least TEMPORAL_MIN_CONSECUTIVE True's
-      within a sliding window of size TEMPORAL_WINDOW.
+      in consecutive frames.
     - Sticky behavior: once active, remain active for the rest of the video.
     """
 

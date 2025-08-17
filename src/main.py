@@ -36,6 +36,30 @@ def setup_logging(verbose: bool = False, log_level: str = "INFO"):
         logger.info("Verbose mode enabled")
 
 
+def apply_detector_config(
+    detector: PersonDetector,
+    sample_rate: int | None = None,
+    max_frames: int | None = None,
+    people_threshold: float | None = None,
+    temporal_min_consecutive: int | None = None,
+    card_min_area_ratio: float | None = None,
+    card_square_tolerance: float | None = None,
+) -> None:
+    """Apply configuration overrides to detector consistently."""
+    if sample_rate is not None:
+        detector.video_processor.config.FRAME_SAMPLE_RATE = int(sample_rate)
+    if max_frames is not None:
+        detector.video_processor.config.MAX_FRAMES = int(max_frames)
+    if people_threshold is not None:
+        detector.config.MULTIPLE_PEOPLE_THRESHOLD = float(people_threshold)
+    if temporal_min_consecutive is not None:
+        detector.config.TEMPORAL_MIN_CONSECUTIVE = int(temporal_min_consecutive)
+    if card_min_area_ratio is not None:
+        detector.config.CARD_MIN_AREA_RATIO_TO_LARGEST = float(card_min_area_ratio)
+    if card_square_tolerance is not None:
+        detector.config.CARD_SQUARE_TOLERANCE = float(card_square_tolerance)
+
+
 @click.group()
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
 @click.option("--log-level", default="INFO", help="Logging level")
@@ -79,6 +103,24 @@ def cli(verbose: bool, log_level: str):
     type=float,
     help="Ratio of frames with >1 person to classify as multi-person",
 )
+@click.option(
+    "--temporal-min-consecutive",
+    default=None,
+    type=int,
+    help="Minimum consecutive frames for temporal activation",
+)
+@click.option(
+    "--card-min-area-ratio",
+    default=None,
+    type=float,
+    help="Minimum area ratio for card detection",
+)
+@click.option(
+    "--card-square-tolerance",
+    default=None,
+    type=float,
+    help="Square tolerance for card detection",
+)
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
 @click.option("--log-level", default="INFO", help="Logging level")
 def predict(
@@ -91,6 +133,9 @@ def predict(
     sample_rate: int | None,
     max_frames: int | None,
     people_threshold: float | None,
+    temporal_min_consecutive: int | None,
+    card_min_area_ratio: float | None,
+    card_square_tolerance: float | None,
     verbose: bool,
     log_level: str,
 ):
@@ -111,12 +156,15 @@ def predict(
             solution=solution,
         )
         # Apply config overrides if provided
-        if sample_rate is not None:
-            detector.video_processor.config.FRAME_SAMPLE_RATE = int(sample_rate)
-        if max_frames is not None:
-            detector.video_processor.config.MAX_FRAMES = int(max_frames)
-        if people_threshold is not None:
-            detector.config.MULTIPLE_PEOPLE_THRESHOLD = float(people_threshold)
+        apply_detector_config(
+            detector=detector,
+            sample_rate=sample_rate,
+            max_frames=max_frames,
+            people_threshold=people_threshold,
+            temporal_min_consecutive=temporal_min_consecutive,
+            card_min_area_ratio=card_min_area_ratio,
+            card_square_tolerance=card_square_tolerance,
+        )
 
         logger.info(f"Processing video: {video}")
         result = detector.predict(video_path=video, confidence_threshold=threshold)
@@ -169,6 +217,24 @@ def predict(
     help="Ratio of frames with >1 person to classify as multi-person",
 )
 @click.option(
+    "--temporal-min-consecutive",
+    default=None,
+    type=int,
+    help="Minimum consecutive frames for temporal activation",
+)
+@click.option(
+    "--card-min-area-ratio",
+    default=None,
+    type=float,
+    help="Minimum area ratio for card detection",
+)
+@click.option(
+    "--card-square-tolerance",
+    default=None,
+    type=float,
+    help="Square tolerance for card detection",
+)
+@click.option(
     "--num-workers",
     default=1,
     type=int,
@@ -202,6 +268,9 @@ def evaluate(
     sample_rate: int | None,
     max_frames: int | None,
     people_threshold: float | None,
+    temporal_min_consecutive: int | None,
+    card_min_area_ratio: float | None,
+    card_square_tolerance: float | None,
     num_workers: int,
     progress: bool,
     output_dir: str,
@@ -238,22 +307,26 @@ def evaluate(
             solution=solution,
             device=device,
             num_workers=num_workers,
-            progress=progress,
+            confidence_threshold=threshold,
+            frame_sample_rate=sample_rate,
+            max_frames=max_frames,
+            multiple_people_threshold=people_threshold,
+            show_progress=progress,
         )
 
         # Apply config overrides if provided
-        if sample_rate is not None:
-            evaluator.detector.\
-                video_processor.config.FRAME_SAMPLE_RATE = int(sample_rate)
-        if max_frames is not None:
-            evaluator.detector\
-                .video_processor.config.MAX_FRAMES = int(max_frames)
-        if people_threshold is not None:
-            evaluator.detector.\
-                config.MULTIPLE_PEOPLE_THRESHOLD = float(people_threshold)
+        if temporal_min_consecutive is not None:
+            evaluator.detector.config.\
+                TEMPORAL_MIN_CONSECUTIVE = int(temporal_min_consecutive)
+        if card_min_area_ratio is not None:
+            evaluator.detector.config.\
+                CARD_MIN_AREA_RATIO_TO_LARGEST = float(card_min_area_ratio)
+        if card_square_tolerance is not None:
+            evaluator.detector.config.\
+                CARD_SQUARE_TOLERANCE = float(card_square_tolerance)
 
         # Run evaluation
-        results = evaluator.evaluate(confidence_threshold=threshold)
+        results = evaluator.evaluate()
 
         # Save results
         os.makedirs(output_dir, exist_ok=True)

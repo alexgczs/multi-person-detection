@@ -201,17 +201,18 @@ You can choose the video-level decision strategy with `--solution`:
 - **counting** (default):
   - Computes the ratio of frames where more than one person is detected.
   - Final decision: `has_multiple_people = (ratio > MULTIPLE_PEOPLE_THRESHOLD)`.
-  - Config parameter: `Config.MULTIPLE_PEOPLE_THRESHOLD` (default: 0.0). A value of 0.2–0.3 can be more robust.
+  - Config parameter: `--people-threshold` (default: 0.0). A value of 0.2–0.3 can be more robust.
 
 - **temporal** (hysteresis):
   - Looks at the temporal sequence of per-frame decisions and activates multi‑person when there are at least `TEMPORAL_MIN_CONSECUTIVE` consecutive frames with multi‑person.
   - Sticky behavior: once activated, the video is considered multi‑person for the rest of its duration.
-  - Config parameters: `Config.TEMPORAL_MIN_CONSECUTIVE` (default: 3), `Config.TEMPORAL_WINDOW` (reserved for future use).
+  - Config parameters: `--temporal-min-consecutive` (default: 20)
 
 - **temporal_cardaware** (temporal with filtering of ID cards):
   - Same as ``temporal`` strategy, but with filtering of faces in ID cards
   - Use of the relation between height/width to detect ID cards
   - Use of the difference of areas between bounding boxes to detect ID cards
+  - Config parameters: `--card-min-area-ratio`, `--card-square-tolerance`
 
 Examples:
 

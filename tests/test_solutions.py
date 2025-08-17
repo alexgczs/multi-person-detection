@@ -35,7 +35,6 @@ class TestSolutions(unittest.TestCase):
 
     def test_temporal_activation_min_consecutive(self):
         cfg = Config()
-        cfg.TEMPORAL_WINDOW = 10
         cfg.TEMPORAL_MIN_CONSECUTIVE = 3
         sol = TemporalHysteresisSolution()
         # Only two consecutive True -> should not activate
@@ -50,7 +49,6 @@ class TestSolutions(unittest.TestCase):
 
     def test_temporal_sticky_once_true(self):
         cfg = Config()
-        cfg.TEMPORAL_WINDOW = 10
         cfg.TEMPORAL_MIN_CONSECUTIVE = 2
         sol = TemporalHysteresisSolution()
         # Two consecutive True early -> activate and stay True

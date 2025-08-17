@@ -35,13 +35,12 @@ class TemporalCardAwareSolution(BaseSolution):
             return {"has_multiple_people": False, "ratio": 0.0}
 
         # Get configuration parameters
-        window = config.TEMPORAL_WINDOW
         min_consecutive = config.TEMPORAL_MIN_CONSECUTIVE
         area_threshold = config.CARD_MIN_AREA_RATIO_TO_LARGEST
         square_tolerance = config.CARD_SQUARE_TOLERANCE
 
         logger.debug(
-            f"card-aware: Config - window={window}, min_consec={min_consecutive}, "
+            f"card-aware: Config min_consec={min_consecutive}, "
             f"area_thresh={area_threshold}, square_tol={square_tolerance}"
         )
 
