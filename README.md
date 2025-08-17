@@ -3,17 +3,20 @@
 [![Build](https://github.com/alexgczs/multi-person-detection/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/alexgczs/multi-person-detection/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/alexgczs/multi-person-detection/graph/badge.svg)](https://codecov.io/gh/alexgczs/multi-person-detection)
 
-This project addresses the fraud detection challenge of detecting when multiple people are present during a verification session (could indicate coercion or fraud).
+A system for detecting multiple people during identity verification sessions.
 
-## Current status
+## Overview
 
-This is the initial implementation focusing on the core inference pipeline. The project currently provides:
+This project addresses a fraud detection challenge: identifying when multiple people are present during a verification session, which could indicate coercion or fraudulent behavior. The system processes video streams and outputs binary labels (0 = single person, 1 = multiple people).
 
-- A working CLI that processes videos and outputs binary labels (0/1)
-- YOLOv8-based person detection (using pre-trained COCO weights)
-- Basic video processing with frame extraction
-- Dataset evaluation with performance metrics
-- Technical report generation
+### Key features
+
+- **Multiple detection backends**: YOLOv8, TorchVision models, OpenCV HOG
+- **Flexible aggregation strategies**: Counting, temporal hysteresis, card-aware detection
+- **CLI**: Command-line interface
+- **Evaluation**: Dataset evaluation with metrics and reports
+- **Real-time demo**: Webcam-based demonstration of backends
+- **Extensible architecture**: Modular design to add backends, solutions...
 
 ## Quick start
 
@@ -26,7 +29,7 @@ cd multi-person-detection
 
 # Create virtual environment
 python -m venv venv
-source venv/bin/activate
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install in development mode (recommended)
 pip install -e .
@@ -41,34 +44,49 @@ pip install -r requirements-dev.txt  # includes runtime + dev tools
 
 **Note**: Installing with `pip install -e .` enables console scripts (`multi-predict`, `multi-evaluate`, etc.) for easier usage.
 
+### Basic usage
 
-### Usage
+```bash
+# Predict on a single video
+multi-predict -i video.mp4
+
+# Evaluate on a dataset
+multi-evaluate -d dataset/ -l labels.txt
+
+# Run real-time demo
+multi-demo
+```
+
+## Usage
 
 The project provides both console scripts and Python module interfaces. Console scripts are recommended for easier usage.
 
-#### Console Scripts (Recommended)
+### Console scripts (recommended)
 
-After installing with `pip install -e .`, you can use the following commands:
+After installing with `pip install -e .`, you can use:
 
 - `multi-predict` - Predict multi-person detection on a single video
 - `multi-evaluate` - Evaluate model performance on a dataset
 - `multi-report` - Generate technical reports from evaluation results
 - `multi-demo` - Run real-time webcam demo
 
-#### Python Module Interface (Alternative)
-
-You can also use the Python module directly:
+### Python module interface (alternative)
 
 ```bash
 python -m src.main <command> [options]
 ```
 
-### Single prediction
+### Complete use
+<details>
+<summary><strong>Single video prediction</strong></summary>
 
-Get a prediction over one single video:
+Get a prediction for a single video:
 
 ```bash
-# Using console script (recommended)
+# Basic prediction
+multi-predict -i path/to/video.mp4
+
+# With custom parameters
 multi-predict -i path/to/video.mp4 \
   --threshold 0.5 \
   --model-size n \
@@ -91,30 +109,25 @@ python -m src.main predict -i path/to/video.mp4 \
 
 The output will be printed to stdout as `label predicted: 0` or `label predicted: 1`.
 
-You can also adjust the detection confidence threshold:
+**Key options:**
+- `--threshold`: Detection confidence threshold (default: 0.5)
+- `--solution`: Aggregation strategy (counting, temporal, temporal_cardaware)
+- `--people-threshold`: Ratio threshold for multi-person detection
+- `--max-frames`: Maximum frames to process
+- `--backend`: Detection model (yolov8, torchvision_frcnn, opencv_hog)
 
-```bash
-python -m src.main predict -i path/to/video.mp4 --threshold 0.7
-```
+</details>
 
-#### Options
-
-- **--video, -i**: Path to the input video file. Required.
-- **--threshold, -t**: Minimum confidence for person detections. Default: 0.5.
-- **--model-size**: Model size (only applied if backend is based on YOLO). Sizes: `n`, `s`, `m`, `l`, `x`. Default: `n`.
-- **--backend**: Detection backend. Supported: `yolov8`, `torchvision_frcnn`, `torchvision_ssd`, `torchvision_retinanet`, `opencv_hog`. Default: `yolov8`.
-- **--solution**: Video-level solution strategy. Supported: `counting`, `temporal` (hysteresis), `temporal_cardaware` (hysteresis + ID-card suppression). Default: `counting`.
-- **--device**: Compute device (`cpu` or `cuda`). Default: auto-detect.
-- **--sample-rate**: Process every Nth frame (1 = every frame). Default: 1.
-- **--max-frames**: Maximum number of frames to process per video (None = all frames). Default: None.
-- **--people-threshold**: Ratio of frames with >1 person to classify as multi-person. Default: 0.0.
-
-### Dataset evaluation
+<details>
+<summary><strong>Dataset evaluation</strong></summary>
 
 Evaluate the model on a complete dataset:
 
 ```bash
-# Using console script (recommended)
+# Basic evaluation
+multi-evaluate -d path/to/dataset -l path/to/labels.txt
+
+# With custom parameters
 multi-evaluate -d path/to/dataset -l path/to/labels.txt \
   --threshold 0.5 --model-size n --device cuda \
   --sample-rate 1 --max-frames 100 --people-threshold 0.2 \
@@ -134,151 +147,214 @@ This will:
 - Generate a technical report
 - Save results to a timestamped directory
 
-You can also specify a custom output directory:
+**Dataset format:**
+- Videos: `.mp4` files in the dataset directory
+- Labels: TSV file with columns `video` and `label` (0/1)
+
+</details>
+
+<details>
+<summary><strong>Real-time demo</strong></summary>
+
+Run a real-time webcam demo:
 
 ```bash
-python -m src.main evaluate -d path/to/dataset -l path/to/labels.txt -o my_evaluation
+# Basic demo
+multi-demo
+
+# With custom parameters
+multi-demo --backend yolov8 --model-size n --threshold 0.5
 ```
 
-Or skip automatic report generation:
+The demo shows:
+- Person detections with bounding boxes
+- Number of people detected
+- FPS counter
+- Confidence scores
 
-```bash
-python -m src.main evaluate -d path/to/dataset -l path/to/labels.txt --no-report
-```
+**Note**: This demo shows frame-by-frame detections only. Solution strategies are not applied. The unique use of this demo is to understand the behavior of each model backend.
 
-#### Arguments
-
-- **--dataset-path, -d**: Path to directory with `.mp4` videos (names must match labels). Required.
-- **--labels-file, -l**: TSV file with columns `video` and `label` (0/1). Required.
-
-#### Options
-
-- **--threshold, -t**: Minimum confidence for person detections. Default: 0.5.
-- **--model-size**: Model size for the selected backend (YOLO sizes: `n`, `s`, `m`, `l`, `x`). Default: `n`.
-- **--backend**: Detection backend. Supported: `yolov8`, `torchvision_frcnn`, `torchvision_ssd`, `torchvision_retinanet`, `opencv_hog`. Default: `yolov8`.
-- **--device**: Compute device (`cpu` or `cuda`). Default: auto-detect.
-- **--sample-rate**: Process every Nth frame (1 = every frame). Default: 1.
-- **--max-frames**: Maximum number of frames to process per video. Default: 100.
-- **--people-threshold**: Ratio of frames with >1 person to classify as multi-person. Default: 0.0.
-- **--num-workers**: Parallel workers for evaluation (per-video). Default: 1.
-- **--progress/--no-progress**: Show or hide progress bar. Default: show.
-- **--output-dir, -o**: Name for results directory under `data/results/`. Default: timestamp.
-- **--no-report**: Skip automatic report generation. Default: off.
-
-### Report generation
-
-Generate a technical report from existing evaluation results:
-
-```bash
-# Using console script (recommended)
-multi-report -r path/to/evaluation_results.json
-
-# Or using Python module (alternative)
-python -m src.main report -r path/to/evaluation_results.json
-```
-
-The report is done automatically using the above evaluation command, but can be useful for:
-- Regenerating reports with different parameters
-- Creating reports from partial evaluation results
-- Debugging report generation
-
-#### Arguments
-
-- **--results-file, -r**: Path to a JSON produced by `evaluate`. Required.
-- **--output-file, -o**: Where to save the generated markdown. If omitted, prints to stdout.
-
-## How system works
-
-1. **Frame extraction**: Videos are processed frame by frame
-2. **Person detection**: Each frame is analyzed using the model selected to detect people
-3. **Aggregation**: The system aggregates the results of each frame into a unique result, using the ``solution`` strategy decided.
-Check ``solution`` strategies integrated at next section.
+</details>
 
 ## Solution strategies
 
-You can choose the video-level decision strategy with `--solution`:
+The system offers three different approaches for aggregating frame-level detections into video-level decisions:
 
-- **counting** (default):
-  - Computes the ratio of frames where more than one person is detected.
-  - Final decision: `has_multiple_people = (ratio > MULTIPLE_PEOPLE_THRESHOLD)`.
-  - Config parameter: `--people-threshold` (default: 0.0). A value of 0.2–0.3 can be more robust.
+<details>
+<summary><strong>Counting strategy (default)</strong></summary>
 
-- **temporal** (hysteresis):
-  - Looks at the temporal sequence of per-frame decisions and activates multi‑person when there are at least `TEMPORAL_MIN_CONSECUTIVE` consecutive frames with multi‑person.
-  - Sticky behavior: once activated, the video is considered multi‑person for the rest of its duration.
-  - Config parameters: `--temporal-min-consecutive` (default: 20)
+**How it works:**
+- Computes the ratio of frames where more than one person is detected
+- Final decision: `has_multiple_people = (ratio > people_threshold)`
 
-- **temporal_cardaware** (temporal with filtering of ID cards):
-  - Same as ``temporal`` strategy, but with filtering of faces in ID cards
-  - Use of the relation between height/width to detect ID cards
-  - Use of the difference of areas between bounding boxes to detect ID cards
-  - Config parameters: `--card-min-area-ratio`, `--card-square-tolerance`
+**Best for:**
+- Simple scenarios with clear detections
+- When you want fast processing
+- Default performance evaluation
 
-Examples:
-
+**Configuration:**
 ```bash
-# Counting (default)
-python -m src.main predict -i video.mp4 --solution counting --people-threshold 0.2
-
-# Temporal (hysteresis) solution
-python -m src.main predict -i video.mp4 --solution temporal
-
-# Evaluate a dataset with the temporal strategy
-python -m src.main evaluate -d path/to/dataset -l labels.txt --solution temporal
+--solution counting --people-threshold 0.2
 ```
 
+**Default threshold:** 0.0 (any frame with multiple people triggers detection)
 
-### Real-time demo
+</details>
 
-Run a realtime webcam demo that draws person detections and overlays the number of people and FPS:
+<details>
+<summary><strong>Temporal strategy (hysteresis)</strong></summary>
 
+**How it works:**
+- Looks at consecutive frames to avoid false positives from brief detections
+- Activates when there are at least `temporal_min_consecutive` consecutive frames with multiple people
+- Once activated, remains active for the rest of the video (sticky behavior)
+
+**Best for:**
+- Noisy detections or brief false positives
+- Scenarios where sustained presence of multiple people is required
+- More robust to detection artifacts
+
+**Configuration:**
 ```bash
-# Using console script (recommended)
-multi-demo \
-  --backend yolov8 \
-  --model-size n \
-  --device cpu \
-  --threshold 0.5 \
-  --sample-rate 1
-
-# Or using Python module (alternative)
-python -m src.main demo \
-  --backend yolov8 \
-  --model-size n \
-  --device cpu \
-  --threshold 0.5 \
-  --sample-rate 1
+--solution temporal --temporal-min-consecutive 3
 ```
 
-Note: This demo is only useful to check the base performance of the models frame by frame.
-The solutions strategies are not applied to aggregate results, so this demo only shows the people detected by the model in each frame.
+**Default:** 20 consecutive frames required
 
-#### Options
+</details>
 
-- **--camera-index**: Webcam index to open. Default: 0.
-- **--backend**: Detection backend. Supported: `yolov8`, `torchvision_frcnn`, `torchvision_ssd`, `torchvision_retinanet`, `opencv_hog`. Default: `yolov8`.
-- **--model-size**: Model size (only applied for YOLO). Sizes: `n`, `s`, `m`, `l`, `x`. Default: `n`.
-- **--device**: `cpu` or `cuda`. Default: auto-detect.
-- **--threshold**: Detection confidence threshold. Default: 0.5.
-- **--sample-rate**: Process every Nth frame (1 = every frame). Default: 1.
-- **--show-confidence/--no-show-confidence**: Toggle confidence labels on boxes. Default: show.
+<details>
+<summary><strong>Card-aware strategy (temporal + ID filtering)</strong></summary>
+
+**How it works:**
+- Same as temporal strategy but filters out faces in ID cards
+- Uses geometric properties to identify ID card faces:
+  - Area ratio compared to largest detection
+  - Square aspect ratio tolerance
+- Prevents false positives from ID card photos
+
+**Best for:**
+- Identity verification scenarios
+- When users show ID cards during verification
+- Most robust for real-world applications
+
+**Configuration:**
+```bash
+--solution temporal_cardaware \
+  --temporal-min-consecutive 3 \
+  --card-min-area-ratio 0.85 \
+  --card-square-tolerance 0.25
+```
+
+**Default parameters:**
+- `card_min_area_ratio`: 0.9 (90% of largest detection)
+- `card_square_tolerance`: 0.35 (35% tolerance for square aspect ratio)
+
+</details>
+
+## Configuration
+
+The system supports three ways to configure parameters, in order of precedence:
+
+1. **CLI parameters** (highest priority)
+2. **Environment variables** (medium priority)  
+3. **Default values** (lowest priority)
+
+<details>
+<summary><strong>CLI parameters</strong></summary>
+
+All configuration parameters can be set via command-line arguments:
+
+```bash
+# Video processing
+--sample-rate 2              # Process every 2nd frame
+--max-frames 100             # Maximum frames per video
+--threshold 0.7              # Detection confidence threshold
+
+# Decision making
+--people-threshold 0.2       # Ratio threshold for multi-person detection
+--solution temporal          # Aggregation strategy
+
+# Model selection
+--backend yolov8             # Detection backend
+--model-size n               # Model size (for YOLO models)
+--device cuda                # Computation device
+
+# Advanced parameters
+--temporal-min-consecutive 3 # Minimum consecutive frames for temporal activation
+--card-min-area-ratio 0.85   # Minimum area ratio for card detection
+--card-square-tolerance 0.25 # Square tolerance for card detection
+```
+
+</details>
+
+<details>
+<summary><strong>Environment variables</strong></summary>
+
+Set environment variables for consistent configuration across runs:
+
+```bash
+# Video processing
+export MULTI_DETECT_FRAME_SAMPLE_RATE=2
+export MULTI_DETECT_MAX_FRAMES=100
+
+# Decision making
+export MULTI_DETECT_MULTIPLE_PEOPLE_THRESHOLD=0.2
+
+# Temporal solution parameters
+export MULTI_DETECT_TEMPORAL_MIN_CONSECUTIVE=3
+
+# Card detection parameters
+export MULTI_DETECT_CARD_MIN_AREA_RATIO=0.85
+export MULTI_DETECT_CARD_SQUARE_TOLERANCE=0.25
+```
+
+</details>
+
+<details>
+<summary><strong>Default configuration</strong></summary>
+
+Default values in `src/utils/config.py`:
+
+```python
+# Video processing
+FRAME_SAMPLE_RATE: int = 1            # Process every frame
+MAX_FRAMES: int = None                # No limit
+FRAME_WIDTH: int = 640                # Resize width
+FRAME_HEIGHT: int = 480               # Resize height
+
+# Decision making
+MULTIPLE_PEOPLE_THRESHOLD: float = 0.0  # Any frame triggers detection
+
+# Temporal solution parameters
+TEMPORAL_MIN_CONSECUTIVE: int = 20      # Min consecutive frames for activation
+
+# Card detection parameters
+CARD_MIN_AREA_RATIO_TO_LARGEST: float = 0.9    # 90% of largest detection
+CARD_SQUARE_TOLERANCE: float = 0.35            # 35% tolerance for square aspect ratio
+```
+
+</details>
 
 ## Project structure
 
 ```
 src/
 ├── models/
-│   └── person_detector.py    # Main detection logic
-├── solutions/                # Video-level aggregation strategies
-│   ├── base.py               # Base solution interface
-│   ├── counting.py               # Default behavior
-│   ├── temporal.py               # Temporal hysteresis solution
-│   └── temporal_cardaware.py     # Temporal + ID-card suppression
+│   ├── person_detector.py    # Main detection logic
+│   └── backends.py          # Detection model implementations
+├── solutions/               # Video-level aggregation strategies
+│   ├── base.py              # Base solution interface
+│   ├── counting.py          # Default counting strategy
+│   ├── temporal.py          # Temporal hysteresis solution
+│   └── temporal_cardaware.py # Temporal + ID-card suppression
 ├── utils/
 │   ├── config.py            # Configuration management
 │   ├── dataset_evaluator.py # Dataset evaluation utilities
 │   ├── report_generator.py  # Technical report generation
 │   └── video_processor.py   # Video frame extraction
+├── demo/
+│   └── realtime.py          # Real-time webcam demo
 └── main.py                  # CLI interface
 
 tests/                       # Unit and integration tests
@@ -287,7 +363,8 @@ data/                        # Dataset and results storage
 
 ## Development
 
-### Using Makefile
+<details>
+<summary><strong>Using Makefile (recommended)</strong></summary>
 
 ```bash
 make help          # Show available commands
@@ -297,10 +374,13 @@ make test          # Run tests
 make test-cov      # Run tests with coverage
 make lint          # Run linting
 make clean         # Clean build artifacts
-make build         # Build the package (sdist and wheel)
+make build         # Build the package
 ```
 
-### Using Python directly
+</details>
+
+<details>
+<summary><strong>Using Python directly</strong></summary>
 
 ```bash
 # First ensure you have dev dependencies installed
@@ -312,21 +392,19 @@ pytest --cov=src   # Run tests with coverage
 flake8 src/ tests/ # Run linting
 ```
 
+</details>
+
 ## Next steps
 
-- [x] Inference pipeline (logic of detect multiple persons)
-- [x] Performance evaluation on the provided dataset
-- [x] Technical report generation
-- [x] Generalization of models
-- [x] Demo in real time
-- [x] Console scripts (CLI, entry point) -> pyproject.toml
-- [x] Makefile for development automation
-- [ ] Add strategies for the multi-detection logic
-- [ ] Analysis
-- [ ] Extras (depending on the time)
-- [ ] Report
+- [x] Core inference pipeline
+- [x] Multiple detection backends
+- [x] Flexible aggregation strategies
+- [x] Dataset evaluation and reporting
+- [x] Real-time demo
+- [x] CLI interface (console scripting)
+- [ ] Advanced temporal analysis
+- [ ] Reort
 - [ ] Next steps with more time and data
-
 
 ## Notes
 
