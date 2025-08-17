@@ -44,6 +44,8 @@ def apply_detector_config(
     temporal_min_consecutive: int | None = None,
     card_min_area_ratio: float | None = None,
     card_square_tolerance: float | None = None,
+    text_proximity_threshold: int | None = None,
+    text_confidence_threshold: float | None = None,
 ) -> None:
     """Apply configuration overrides to detector consistently."""
     if sample_rate is not None:
@@ -58,6 +60,10 @@ def apply_detector_config(
         detector.config.CARD_MIN_AREA_RATIO_TO_LARGEST = float(card_min_area_ratio)
     if card_square_tolerance is not None:
         detector.config.CARD_SQUARE_TOLERANCE = float(card_square_tolerance)
+    if text_proximity_threshold is not None:
+        detector.config.TEXT_PROXIMITY_THRESHOLD = int(text_proximity_threshold)
+    if text_confidence_threshold is not None:
+        detector.config.TEXT_CONFIDENCE_THRESHOLD = float(text_confidence_threshold)
 
 
 @click.group()
@@ -90,7 +96,8 @@ def cli(verbose: bool, log_level: str):
     "--solution",
     default="counting",
     type=click.Choice(
-        ["counting", "temporal", "temporal_cardaware"], case_sensitive=False
+        ["counting", "temporal", "temporal_cardaware", "temporal_textaware"],
+        case_sensitive=False
     ),
     help="Video-level solution strategy",
 )
@@ -121,6 +128,18 @@ def cli(verbose: bool, log_level: str):
     type=float,
     help="Square tolerance for card detection",
 )
+@click.option(
+    "--text-proximity-threshold",
+    default=None,
+    type=int,
+    help="Text proximity threshold for text-aware detection",
+)
+@click.option(
+    "--text-confidence-threshold",
+    default=None,
+    type=float,
+    help="OCR confidence threshold for text detection",
+)
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
 @click.option("--log-level", default="INFO", help="Logging level")
 def predict(
@@ -136,6 +155,8 @@ def predict(
     temporal_min_consecutive: int | None,
     card_min_area_ratio: float | None,
     card_square_tolerance: float | None,
+    text_proximity_threshold: int | None,
+    text_confidence_threshold: float | None,
     verbose: bool,
     log_level: str,
 ):
@@ -164,6 +185,8 @@ def predict(
             temporal_min_consecutive=temporal_min_consecutive,
             card_min_area_ratio=card_min_area_ratio,
             card_square_tolerance=card_square_tolerance,
+            text_proximity_threshold=text_proximity_threshold,
+            text_confidence_threshold=text_confidence_threshold,
         )
 
         logger.info(f"Processing video: {video}")
@@ -203,7 +226,8 @@ def predict(
     "--solution",
     default="counting",
     type=click.Choice(
-        ["counting", "temporal", "temporal_cardaware"], case_sensitive=False
+        ["counting", "temporal", "temporal_cardaware", "temporal_textaware"],
+        case_sensitive=False
     ),
     help="Video-level solution strategy",
 )
@@ -233,6 +257,18 @@ def predict(
     default=None,
     type=float,
     help="Square tolerance for card detection",
+)
+@click.option(
+    "--text-proximity-threshold",
+    default=None,
+    type=int,
+    help="Text proximity threshold for text-aware detection",
+)
+@click.option(
+    "--text-confidence-threshold",
+    default=None,
+    type=float,
+    help="OCR confidence threshold for text detection",
 )
 @click.option(
     "--num-workers",
@@ -271,6 +307,8 @@ def evaluate(
     temporal_min_consecutive: int | None,
     card_min_area_ratio: float | None,
     card_square_tolerance: float | None,
+    text_proximity_threshold: int | None,
+    text_confidence_threshold: float | None,
     num_workers: int,
     progress: bool,
     output_dir: str,
@@ -311,19 +349,13 @@ def evaluate(
             frame_sample_rate=sample_rate,
             max_frames=max_frames,
             multiple_people_threshold=people_threshold,
+            temporal_min_consecutive=temporal_min_consecutive,
+            card_min_area_ratio=card_min_area_ratio,
+            card_square_tolerance=card_square_tolerance,
+            text_proximity_threshold=text_proximity_threshold,
+            text_confidence_threshold=text_confidence_threshold,
             show_progress=progress,
         )
-
-        # Apply config overrides if provided
-        if temporal_min_consecutive is not None:
-            evaluator.detector.config.\
-                TEMPORAL_MIN_CONSECUTIVE = int(temporal_min_consecutive)
-        if card_min_area_ratio is not None:
-            evaluator.detector.config.\
-                CARD_MIN_AREA_RATIO_TO_LARGEST = float(card_min_area_ratio)
-        if card_square_tolerance is not None:
-            evaluator.detector.config.\
-                CARD_SQUARE_TOLERANCE = float(card_square_tolerance)
 
         # Run evaluation
         results = evaluator.evaluate()
@@ -451,7 +483,6 @@ cli.add_command(predict)
 cli.add_command(evaluate)
 cli.add_command(report)
 cli.add_command(demo)
-
 
 if __name__ == "__main__":
     cli()

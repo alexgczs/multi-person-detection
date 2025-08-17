@@ -30,7 +30,7 @@ class TemporalHysteresisSolution(BaseSolution):
             }
 
         # min_consec used for activation
-        min_consec = max(1, int(getattr(config, "TEMPORAL_MIN_CONSECUTIVE", 3)))
+        min_consec = max(1, config.TEMPORAL_MIN_CONSECUTIVE)
 
         flags = [bool(fr.get("has_multiple_people", False)) for fr in frame_results]
         frames_with_multiple = sum(1 for f in flags if f)

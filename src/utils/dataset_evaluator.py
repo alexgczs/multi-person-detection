@@ -40,6 +40,11 @@ class DatasetEvaluator:
         frame_sample_rate: int | None = None,
         max_frames: int | None = None,
         multiple_people_threshold: float | None = None,
+        temporal_min_consecutive: int | None = None,
+        card_min_area_ratio: float | None = None,
+        card_square_tolerance: float | None = None,
+        text_proximity_threshold: int | None = None,
+        text_confidence_threshold: float | None = None,
         num_workers: int = 1,
         show_progress: bool = False,
     ):
@@ -60,6 +65,11 @@ class DatasetEvaluator:
         self.frame_sample_rate = frame_sample_rate
         self.max_frames = max_frames
         self.multiple_people_threshold = multiple_people_threshold
+        self.temporal_min_consecutive = temporal_min_consecutive
+        self.card_min_area_ratio = card_min_area_ratio
+        self.card_square_tolerance = card_square_tolerance
+        self.text_proximity_threshold = text_proximity_threshold
+        self.text_confidence_threshold = text_confidence_threshold
         self.num_workers = max(1, int(num_workers))
         self.show_progress = bool(show_progress)
         self.backend = backend
@@ -83,6 +93,24 @@ class DatasetEvaluator:
         if multiple_people_threshold is not None:
             self.detector.config.MULTIPLE_PEOPLE_THRESHOLD = float(
                 multiple_people_threshold
+            )
+        if temporal_min_consecutive is not None:
+            self.detector.config.TEMPORAL_MIN_CONSECUTIVE = int(
+                temporal_min_consecutive
+            )
+        if card_min_area_ratio is not None:
+            self.detector.config.CARD_MIN_AREA_RATIO_TO_LARGEST = float(
+                card_min_area_ratio
+            )
+        if card_square_tolerance is not None:
+            self.detector.config.CARD_SQUARE_TOLERANCE = float(card_square_tolerance)
+        if text_proximity_threshold is not None:
+            self.detector.config.TEXT_PROXIMITY_THRESHOLD = int(
+                text_proximity_threshold
+            )
+        if text_confidence_threshold is not None:
+            self.detector.config.TEXT_CONFIDENCE_THRESHOLD = float(
+                text_confidence_threshold
             )
         self.ground_truth = self._load_labels()
 
@@ -176,6 +204,15 @@ class DatasetEvaluator:
 
         # Progress bar disabled in non-interactive contexts
         progress_disable = not sys.stderr.isatty() or not self.show_progress
+
+        # Disable parallelism for text-aware solution due to EasyOCR
+        # serialization issues
+        if self.solution == "temporal_textaware" and self.num_workers > 1:
+            logger.warning(
+                "Disabling parallel processing for temporal_textaware solution "
+                "due to EasyOCR serialization limitations. Using single worker."
+            )
+            self.num_workers = 1
 
         if self.num_workers == 1:
             iterable = tqdm(

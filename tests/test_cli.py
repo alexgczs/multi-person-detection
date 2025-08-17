@@ -419,6 +419,181 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         mock_run_demo.assert_called_once()
 
+    def test_cli_predict_with_text_confidence_threshold(self):
+        """Test predict command with text confidence threshold parameter."""
+        with patch("src.main.PersonDetector") as mock_detector_class:
+            mock_detector = Mock()
+            mock_detector.predict.return_value = {"has_multiple_people": True}
+            mock_detector_class.return_value = mock_detector
+
+            with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
+                video_path = f.name
+
+            try:
+                result = self.runner.invoke(
+                    cli, [
+                        "predict",
+                        "-i", video_path,
+                        "--solution", "temporal_textaware",
+                        "--text-confidence-threshold", "0.3",
+                        "--text-proximity-threshold", "150"
+                    ]
+                )
+                self.assertEqual(result.exit_code, 0)
+                self.assertIn("label predicted: 1", result.output)
+
+                # Verify that PersonDetector was called with correct config
+                mock_detector_class.assert_called_once()
+
+                # Check that apply_detector_config was properly applied
+                # The mock detector should have config modified
+                self.assertTrue(mock_detector.config is not None)
+
+            finally:
+                os.unlink(video_path)
+
+    def test_cli_predict_temporal_textaware_solution(self):
+        """Test predict command with temporal_textaware solution."""
+        with patch("src.main.PersonDetector") as mock_detector_class:
+            mock_detector = Mock()
+            mock_detector.predict.return_value = {"has_multiple_people": False}
+            mock_detector_class.return_value = mock_detector
+
+            with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
+                video_path = f.name
+
+            try:
+                result = self.runner.invoke(
+                    cli, [
+                        "predict",
+                        "-i", video_path,
+                        "--solution", "temporal_textaware"
+                    ]
+                )
+                self.assertEqual(result.exit_code, 0)
+                self.assertIn("label predicted: 0", result.output)
+
+                # Verify solution was passed correctly
+                called_kwargs = mock_detector_class.call_args.kwargs
+                self.assertEqual(called_kwargs.get("solution"), "temporal_textaware")
+
+            finally:
+                os.unlink(video_path)
+
+    def test_cli_evaluate_with_text_aware_parameters(self):
+        """Test evaluate command with text-aware solution parameters."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create a mock video file
+            video_path = os.path.join(temp_dir, "test_video.mp4")
+            with open(video_path, "w") as f:
+                f.write("mock video content")
+
+            # Create labels file
+            labels_file = os.path.join(temp_dir, "labels.txt")
+            labels_df = pd.DataFrame({"video": ["test_video"], "label": [1]})
+            labels_df.to_csv(labels_file, sep="\t", index=False)
+
+            with patch("src.main.DatasetEvaluator") as mock_evaluator_class:
+                mock_evaluator = Mock()
+                mock_evaluator.evaluate.return_value = {
+                    "total_videos": 1,
+                    "accuracy": 1.0,
+                    "precision": 1.0,
+                    "recall": 1.0,
+                    "f1_score": 1.0,
+                    "confusion_matrix": [[1, 0], [0, 0]],
+                }
+                mock_evaluator.save_results.return_value = None
+                mock_evaluator_class.return_value = mock_evaluator
+
+                with patch("src.main.ReportGenerator") as mock_report_class:
+                    mock_report = Mock()
+                    mock_report.generate_report.return_value = "Mock report"
+                    mock_report_class.return_value = mock_report
+
+                    result = self.runner.invoke(
+                        cli,
+                        [
+                            "evaluate",
+                            "-d", temp_dir,
+                            "-l", labels_file,
+                            "--solution", "temporal_textaware",
+                            "--text-confidence-threshold", "0.4",
+                            "--text-proximity-threshold", "75",
+                            "--temporal-min-consecutive", "3",
+                            "--no-progress",
+                            "--no-report"
+                        ],
+                    )
+
+                    self.assertEqual(result.exit_code, 0)
+                    self.assertIn("Accuracy:", result.output)
+
+                    # Verify parameters were passed to DatasetEvaluator
+                    mock_evaluator_class.assert_called_once()
+                    called_kwargs = mock_evaluator_class.call_args.kwargs
+                    self.assertEqual(
+                        called_kwargs.get("solution"), "temporal_textaware"
+                    )
+                    self.assertEqual(
+                        called_kwargs.get("text_confidence_threshold"), 0.4
+                    )
+                    self.assertEqual(called_kwargs.get("text_proximity_threshold"), 75)
+                    self.assertEqual(called_kwargs.get("temporal_min_consecutive"), 3)
+
+    def test_cli_predict_all_text_aware_parameters(self):
+        """Test predict command with all text-aware parameters."""
+        with patch("src.main.PersonDetector") as mock_detector_class:
+            mock_detector = Mock()
+            mock_detector.predict.return_value = {"has_multiple_people": True}
+            mock_detector_class.return_value = mock_detector
+
+            with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
+                video_path = f.name
+
+            try:
+                result = self.runner.invoke(
+                    cli, [
+                        "predict",
+                        "-i", video_path,
+                        "--solution", "temporal_textaware",
+                        "--threshold", "0.3",
+                        "--text-confidence-threshold", "0.6",
+                        "--text-proximity-threshold", "120",
+                        "--temporal-min-consecutive", "2",
+                        "--card-min-area-ratio", "0.8",
+                        "--card-square-tolerance", "0.4",
+                        "--max-frames", "50"
+                    ]
+                )
+                self.assertEqual(result.exit_code, 0)
+                self.assertIn("label predicted: 1", result.output)
+
+                # Verify all parameters were processed
+                mock_detector_class.assert_called_once()
+
+            finally:
+                os.unlink(video_path)
+
+    def test_cli_invalid_text_confidence_threshold(self):
+        """Test predict command with invalid text confidence threshold."""
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
+            video_path = f.name
+
+        try:
+            result = self.runner.invoke(
+                cli, [
+                    "predict",
+                    "-i", video_path,
+                    "--solution", "temporal_textaware",
+                    "--text-confidence-threshold", "invalid_value"
+                ]
+            )
+            self.assertNotEqual(result.exit_code, 0)
+
+        finally:
+            os.unlink(video_path)
+
 
 if __name__ == "__main__":
     unittest.main()

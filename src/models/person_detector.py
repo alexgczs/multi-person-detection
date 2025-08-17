@@ -19,6 +19,7 @@ from src.solutions.base import BaseSolution
 from src.solutions.counting import CountingSolution
 from src.solutions.temporal import TemporalHysteresisSolution
 from src.solutions.temporal_cardaware import TemporalCardAwareSolution
+from src.solutions.temporal_textaware import TemporalTextAwareSolution
 
 from src.models.backends import (
     OpenCVHOGBackend,
@@ -44,6 +45,7 @@ class PersonDetector:
         device: Optional[str] = None,
         backend: str = "yolov8",
         solution: str = "counting",
+        config: Optional[Config] = None,
     ):
         """
         Initialize the person detector.
@@ -60,7 +62,7 @@ class PersonDetector:
         # Initialize backend and utilities
         self.backend: PersonDetectionBackend = self._init_backend()
         self.video_processor = VideoProcessor()
-        self.config = Config()
+        self.config = config or Config()
         self.solution: BaseSolution = self._init_solution()
 
         logger.info(
@@ -92,9 +94,11 @@ class PersonDetector:
             return TemporalHysteresisSolution()
         if self.solution_name == "temporal_cardaware":
             return TemporalCardAwareSolution()
+        if self.solution_name == "temporal_textaware":
+            return TemporalTextAwareSolution()
         raise ValueError(
             "Unsupported solution '" + self.solution_name + "'. Supported: "
-            "['counting', 'temporal', 'temporal_cardaware']",
+            "['counting', 'temporal', 'temporal_cardaware', 'temporal_textaware']",
         )
 
     def predict(self, video_path: str, confidence_threshold: float = 0.5) -> Dict:
@@ -119,6 +123,11 @@ class PersonDetector:
             for i, frame in enumerate(frames):
                 result = self._process_frame(frame, confidence_threshold)
                 result["frame_index"] = i
+
+                # Apply text-aware filtering if using temporal_textaware solution
+                if (self.solution_name == "temporal_textaware" and
+                        result["num_people"] >= 2):
+                    result = self._apply_text_filtering(result, frame)
                 frame_results.append(result)
 
             final_result = self.solution.aggregate(frame_results, self.config)
@@ -161,6 +170,31 @@ class PersonDetector:
             logger.error(f"Error processing frame: {e}")
             # To avoid error in complete process, we return 0 people detected
             return {"num_people": 0, "detections": [], "has_multiple_people": False}
+
+    def _apply_text_filtering(self, frame_result: Dict, frame: np.ndarray) -> Dict:
+        """
+        Apply text-aware filtering to remove faces near text regions.
+
+        Args:
+            frame_result: Frame detection result
+            frame: Original frame image
+
+        Returns:
+            Filtered frame result
+        """
+        if self.solution_name != "temporal_textaware":
+            return frame_result
+
+        # Get the text-aware solution instance to use its methods
+        text_solution = self.solution
+        if hasattr(text_solution, '_filter_id_card_faces'):
+            # Apply the text filtering
+            filtered_results = text_solution._filter_id_card_faces(
+                [frame_result], frame, self.config
+            )
+            return filtered_results[0] if filtered_results else frame_result
+
+        return frame_result
 
     def _aggregate_results(self, frame_results: List[Dict]) -> Dict:
         """

@@ -19,6 +19,7 @@ A system for detecting multiple people during identity verification sessions.
   - [Counting strategy](#counting-strategy-default)
   - [Temporal strategy](#temporal-strategy-hysteresis)
   - [Card-aware strategy](#card-aware-strategy-temporal--id-filtering)
+  - [Text-aware strategy](#text-aware-strategy-temporal--text-detection)
 - [Configuration](#configuration)
   - [CLI parameters](#cli-parameters)
   - [Environment variables](#environment-variables)
@@ -37,7 +38,7 @@ This project addresses a fraud detection challenge: identifying when multiple pe
 ### Key features
 
 - **Multiple detection backends**: YOLOv8, TorchVision models, OpenCV HOG
-- **Flexible aggregation strategies**: Counting, temporal hysteresis, card-aware detection
+- **Flexible aggregation strategies**: Counting, temporal hysteresis, card-aware detection, text-aware detection
 - **CLI**: Command-line interface
 - **Evaluation**: Dataset evaluation with metrics and reports
 - **Real-time demo**: Webcam-based demonstration of backends
@@ -136,7 +137,7 @@ The output will be printed to stdout as `label predicted: 0` or `label predicted
 
 **Key options:**
 - `--threshold`: Detection confidence threshold (default: 0.5)
-- `--solution`: Aggregation strategy (counting, temporal, temporal_cardaware)
+- `--solution`: Aggregation strategy (counting, temporal, temporal_cardaware, temporal_textaware)
 - `--people-threshold`: Ratio threshold for multi-person detection
 - `--max-frames`: Maximum frames to process
 - `--backend`: Detection model (yolov8, torchvision_frcnn, opencv_hog)
@@ -157,6 +158,12 @@ multi-evaluate -d path/to/dataset -l path/to/labels.txt \
   --threshold 0.5 --model-size n --device cuda \
   --sample-rate 1 --max-frames 100 --people-threshold 0.2 \
   --solution temporal
+
+# With text-aware solution for document filtering
+multi-evaluate -d path/to/dataset -l path/to/labels.txt \
+  --solution temporal_textaware \
+  --text-confidence-threshold 0.6 \
+  --text-proximity-threshold 80
 
 # Or using Python module (alternative)
 python -m src.main evaluate -d path/to/dataset -l path/to/labels.txt \
@@ -203,7 +210,7 @@ The demo shows:
 
 ## Solution strategies
 
-The system offers three different approaches for aggregating frame-level detections into video-level decisions:
+The system offers four different approaches for aggregating frame-level detections into video-level decisions:
 
 <details>
 <summary><strong>Counting strategy (default)</strong></summary>
@@ -277,6 +284,34 @@ The system offers three different approaches for aggregating frame-level detecti
 
 </details>
 
+<details>
+<summary><strong>Text-aware strategy (temporal + text detection)</strong></summary>
+
+**How it works:**
+- Combines temporal hysteresis with text detection using EasyOCR
+- Filters out faces that are near detected text regions (likely ID documents)
+- Uses proximity threshold to determine if a face is near text
+
+**Best for:**
+- Identity verification with documents containing text
+- Reducing false positives from document photos
+
+**Configuration:**
+```bash
+--solution temporal_textaware \
+  --temporal-min-consecutive 3 \
+  --text-proximity-threshold 100 \
+  --text-confidence-threshold 0.5
+```
+
+**Default parameters:**
+- `text_proximity_threshold`: 100 pixels (distance between face and text centers)
+- `text_confidence_threshold`: 0.5 (minimum OCR confidence for text detection)
+
+**Note:** This solution requires EasyOCR for text detection and may be slower than other approaches. Use a GPU is recommended.
+
+</details>
+
 ## Configuration
 
 The system supports three ways to configure parameters, in order of precedence:
@@ -309,6 +344,8 @@ All configuration parameters can be set via command-line arguments:
 --temporal-min-consecutive 3 # Minimum consecutive frames for temporal activation
 --card-min-area-ratio 0.85   # Minimum area ratio for card detection
 --card-square-tolerance 0.25 # Square tolerance for card detection
+--text-proximity-threshold 100 # Text proximity threshold for text-aware detection
+--text-confidence-threshold 0.5 # OCR confidence threshold for text detection
 ```
 
 </details>
@@ -332,6 +369,10 @@ export MULTI_DETECT_TEMPORAL_MIN_CONSECUTIVE=3
 # Card detection parameters
 export MULTI_DETECT_CARD_MIN_AREA_RATIO=0.85
 export MULTI_DETECT_CARD_SQUARE_TOLERANCE=0.25
+
+# Text detection parameters
+export MULTI_DETECT_TEXT_PROXIMITY_THRESHOLD=100
+export MULTI_DETECT_TEXT_CONFIDENCE_THRESHOLD=0.5
 ```
 
 </details>
@@ -357,6 +398,10 @@ TEMPORAL_MIN_CONSECUTIVE: int = 20      # Min consecutive frames for activation
 # Card detection parameters
 CARD_MIN_AREA_RATIO_TO_LARGEST: float = 0.9    # 90% of largest detection
 CARD_SQUARE_TOLERANCE: float = 0.35            # 35% tolerance for square aspect ratio
+
+# Text detection parameters
+TEXT_PROXIMITY_THRESHOLD: int = 100            # Proximity threshold in pixels
+TEXT_CONFIDENCE_THRESHOLD: float = 0.5         # OCR confidence threshold
 ```
 
 </details>
@@ -372,7 +417,8 @@ src/
 │   ├── base.py              # Base solution interface
 │   ├── counting.py          # Default counting strategy
 │   ├── temporal.py          # Temporal hysteresis solution
-│   └── temporal_cardaware.py # Temporal + ID-card suppression
+│   ├── temporal_cardaware.py # Temporal + ID-card suppression
+│   └── temporal_textaware.py # Temporal + text detection
 ├── utils/
 │   ├── config.py            # Configuration management
 │   ├── dataset_evaluator.py # Dataset evaluation utilities
@@ -427,8 +473,8 @@ flake8 src/ tests/ # Run linting
 - [x] Dataset evaluation and reporting
 - [x] Real-time demo
 - [x] CLI interface (console scripting)
-- [ ] Advanced temporal analysis
-- [ ] Reort
+- [X] Advanced temporal analysis
+- [ ] Report
 - [ ] Next steps with more time and data
 
 ## Notes

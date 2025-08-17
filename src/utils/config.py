@@ -41,6 +41,10 @@ class Config:
     CARD_MIN_AREA_RATIO_TO_LARGEST: float = 0.90
     CARD_SQUARE_TOLERANCE: float = 0.35
 
+    # Text detection parameters
+    TEXT_PROXIMITY_THRESHOLD: int = 100  # pixels
+    TEXT_CONFIDENCE_THRESHOLD: float = 0.5  # OCR confidence threshold
+
     def __post_init__(self):
         """Load configuration from environment variables."""
         # Video Processing
@@ -71,6 +75,13 @@ class Config:
         if env_val := os.getenv('MULTI_DETECT_CARD_SQUARE_TOLERANCE'):
             self.CARD_SQUARE_TOLERANCE = float(env_val)
 
+        # Text detection parameters
+        if env_val := os.getenv('MULTI_DETECT_TEXT_PROXIMITY_THRESHOLD'):
+            self.TEXT_PROXIMITY_THRESHOLD = int(env_val)
+
+        if env_val := os.getenv('MULTI_DETECT_TEXT_CONFIDENCE_THRESHOLD'):
+            self.TEXT_CONFIDENCE_THRESHOLD = float(env_val)
+
     def to_dict(self) -> dict:
         """Convert configuration to dictionary (for logging/debugging)."""
         return {
@@ -82,4 +93,6 @@ class Config:
             'TEMPORAL_MIN_CONSECUTIVE': self.TEMPORAL_MIN_CONSECUTIVE,
             'CARD_MIN_AREA_RATIO_TO_LARGEST': self.CARD_MIN_AREA_RATIO_TO_LARGEST,
             'CARD_SQUARE_TOLERANCE': self.CARD_SQUARE_TOLERANCE,
+            'TEXT_PROXIMITY_THRESHOLD': self.TEXT_PROXIMITY_THRESHOLD,
+            'TEXT_CONFIDENCE_THRESHOLD': self.TEXT_CONFIDENCE_THRESHOLD,
         }

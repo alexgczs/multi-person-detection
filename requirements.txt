@@ -5,6 +5,7 @@ torchvision==0.17.2
 opencv-python==4.8.1.78
 numpy==1.26.4
 Pillow==10.3.0
+easyocr==1.7.0
 
 # CLI and logging
 click==8.1.7
