@@ -41,7 +41,9 @@ class VideoProcessor:
         try:
             # Use config defaults if not specified
             sample_rate = int(sample_rate or self.config.FRAME_SAMPLE_RATE)
-            max_frames = int(max_frames or self.config.MAX_FRAMES)
+            max_frames = max_frames or self.config.MAX_FRAMES
+            if max_frames is not None:
+                max_frames = int(max_frames)
 
             logger.info(f"Extracting frames from: {video_path}")
 
@@ -82,8 +84,8 @@ class VideoProcessor:
                     frames.append(frame)
                     extracted_count += 1
 
-                    # Stop if max frames reached
-                    if extracted_count >= max_frames:
+                    # Stop if max frames reached (only if max_frames is not None)
+                    if max_frames is not None and extracted_count >= max_frames:
                         break
 
                 frame_count += 1

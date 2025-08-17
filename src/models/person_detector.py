@@ -18,6 +18,7 @@ from src.utils.video_processor import VideoProcessor
 from src.solutions.base import BaseSolution
 from src.solutions.counting import CountingSolution
 from src.solutions.temporal import TemporalHysteresisSolution
+from src.solutions.temporal_cardaware import TemporalCardAwareSolution
 
 from src.models.backends import (
     OpenCVHOGBackend,
@@ -89,9 +90,11 @@ class PersonDetector:
             return CountingSolution()
         if self.solution_name == "temporal":
             return TemporalHysteresisSolution()
+        if self.solution_name == "temporal_cardaware":
+            return TemporalCardAwareSolution()
         raise ValueError(
             "Unsupported solution '" + self.solution_name + "'. Supported: "
-            "['counting', 'temporal']",
+            "['counting', 'temporal', 'temporal_cardaware']",
         )
 
     def predict(self, video_path: str, confidence_threshold: float = 0.5) -> Dict:

@@ -6,6 +6,7 @@ import unittest
 
 from src.solutions.counting import CountingSolution
 from src.solutions.temporal import TemporalHysteresisSolution
+from src.solutions.temporal_cardaware import TemporalCardAwareSolution
 from src.utils.config import Config
 
 
@@ -62,6 +63,57 @@ class TestSolutions(unittest.TestCase):
         ]
         res = sol.aggregate(frames, cfg)
         self.assertTrue(res["has_multiple_people"])  # sticky behavior
+
+    def test_temporal_cardaware_suppresses_square_small(self):
+        cfg = Config()
+        cfg.TEMPORAL_MIN_CONSECUTIVE = 1
+        cfg.CARD_MIN_AREA_RATIO_TO_LARGEST = 0.2
+        cfg.CARD_SQUARE_TOLERANCE = 0.2
+
+        sol = TemporalCardAwareSolution()
+        # Two detections: one large, one small almost square -> should suppress 1
+        frames = [
+            {
+                "num_people": 2,
+                "has_multiple_people": True,
+                "detections": [
+                    {"bbox": [0, 0, 100, 200],
+                     "confidence": 0.9,
+                     "class": 0},  # large (AR=0.5)
+                    {"bbox": [10, 10, 30, 30],
+                     "confidence": 0.9,
+                     "class": 0},  # small, square
+                ],
+            }
+        ]
+        res = sol.aggregate(frames, cfg)
+        # After suppression, adjusted count = 1 -> not multi-person
+        self.assertFalse(res["has_multiple_people"])  # suppressed small square
+
+    def test_temporal_cardaware_keeps_two_if_not_square(self):
+        cfg = Config()
+        cfg.TEMPORAL_MIN_CONSECUTIVE = 1
+        cfg.CARD_MIN_AREA_RATIO_TO_LARGEST = 0.2
+        cfg.CARD_SQUARE_TOLERANCE = 0.1
+
+        sol = TemporalCardAwareSolution()
+        # Two detections: small but not square (AR far from 1) -> do not suppress
+        frames = [
+            {
+                "num_people": 2,
+                "has_multiple_people": True,
+                "detections": [
+                    {"bbox": [0, 0, 100, 200],
+                     "confidence": 0.9,
+                     "class": 0},  # large (AR=0.5)
+                    {"bbox": [10, 10, 50, 30],
+                     "confidence": 0.9,
+                     "class": 0},  # small, AR~2
+                ],
+            }
+        ]
+        res = sol.aggregate(frames, cfg)
+        self.assertTrue(res["has_multiple_people"])  # not square -> remains 2
 
     def test_counting_equal_threshold_edge(self):
         cfg = Config()

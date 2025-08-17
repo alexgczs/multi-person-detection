@@ -61,7 +61,9 @@ def cli(verbose: bool, log_level: str):
 @click.option(
     "--solution",
     default="counting",
-    type=click.Choice(["counting", "temporal"], case_sensitive=False),
+    type=click.Choice(
+        ["counting", "temporal", "temporal_cardaware"], case_sensitive=False
+    ),
     help="Video-level solution strategy",
 )
 @click.option("--device", default=None, help="Computation device: cpu or cuda")
@@ -143,7 +145,9 @@ def predict(
 @click.option(
     "--solution",
     default="counting",
-    type=click.Choice(["counting", "temporal"], case_sensitive=False),
+    type=click.Choice(
+        ["counting", "temporal", "temporal_cardaware"], case_sensitive=False
+    ),
     help="Video-level solution strategy",
 )
 @click.option("--device", default=None, help="Computation device: cpu or cuda")
@@ -360,7 +364,9 @@ def report(results_file: str, output_file: str):
 @click.option(
     "--solution",
     default="counting",
-    type=click.Choice(["counting", "temporal"], case_sensitive=False),
+    type=click.Choice(
+        ["counting", "temporal", "temporal_cardaware"], case_sensitive=False
+    ),
     help="Video-level solution strategy",
 )
 @click.option(

@@ -63,7 +63,7 @@ python -m src.main predict -i path/to/video.mp4 --threshold 0.7
 - **--threshold, -t**: Minimum confidence for person detections. Default: 0.5.
 - **--model-size**: Model size (only applied if backend is based on YOLO). Sizes: `n`, `s`, `m`, `l`, `x`. Default: `n`.
 - **--backend**: Detection backend. Supported: `yolov8`, `torchvision_frcnn`, `torchvision_ssd`, `torchvision_retinanet`, `opencv_hog`. Default: `yolov8`.
-- **--solution**: Video-level solution strategy. Supported: `counting`, `temporal` (hysteresis). Default: `counting`.
+- **--solution**: Video-level solution strategy. Supported: `counting`, `temporal` (hysteresis), `temporal_cardaware` (hysteresis + ID-card suppression). Default: `counting`.
 - **--device**: Compute device (`cpu` or `cuda`). Default: auto-detect.
 - **--sample-rate**: Process every Nth frame (1 = every frame). Default: 1.
 - **--max-frames**: Maximum number of frames to process per video. Default: 100.
@@ -157,6 +157,11 @@ You can choose the video-level decision strategy with `--solution`:
   - Sticky behavior: once activated, the video is considered multi‑person for the rest of its duration.
   - Config parameters: `Config.TEMPORAL_MIN_CONSECUTIVE` (default: 3), `Config.TEMPORAL_WINDOW` (reserved for future use).
 
+- **temporal_cardaware** (temporal with filtering of ID cards):
+  - Same as ``temporal`` strategy, but with filtering of faces in ID cards
+  - Use of the relation between height/width to detect ID cards
+  - Use of the difference of areas between bounding boxes to detect ID cards
+
 Examples:
 
 ```bash
@@ -207,8 +212,9 @@ src/
 │   └── person_detector.py    # Main detection logic
 ├── solutions/                # Video-level aggregation strategies
 │   ├── base.py               # Base solution interface
-│   ├── counting.py           # Default behavior
-│   └── temporal.py           # Temporal hysteresis solution
+│   ├── counting.py               # Default behavior
+│   ├── temporal.py               # Temporal hysteresis solution
+│   └── temporal_cardaware.py     # Temporal + ID-card suppression
 ├── utils/
 │   ├── config.py            # Configuration management
 │   ├── dataset_evaluator.py # Dataset evaluation utilities
@@ -241,7 +247,7 @@ pytest --cov=src
 - [x] Technical report generation
 - [x] Generalization of models
 - [x] Demo in real time
-- [ ] Training pipeline for fit models to the task
+- [ ] Add strategies for the multi-detection logic
 - [ ] Analysis
 - [ ] Extras (depending on the time)
 - [ ] Console script (CLI, entry point) -> toml

@@ -237,7 +237,7 @@ class TestCLI(unittest.TestCase):
                             "-l",
                             labels_file,
                             "-o",
-                            "custom_output",
+                            "test_output",
                             "--no-progress",
                             "--backend",
                             "opencv_hog",
