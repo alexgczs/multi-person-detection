@@ -1,3 +1,7 @@
+# Runtime dependencies
+-r requirements.txt
+
+# Development dependencies
 pytest==8.2.2
 pytest-cov==5.0.0
 coverage==7.5.3

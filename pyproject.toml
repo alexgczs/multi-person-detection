@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "multi-person-detection"
+version = "0.1.0"
+description = "Detect multiple people in identity verification videos"
+readme = "README.md"
+authors = [{ name = "Alejandro Garayoa", email = "alex11gcz@gmail.com" }]
+requires-python = ">=3.10"
+
+dependencies = [
+    "torch==2.2.2",
+    "torchvision==0.17.2",
+    "ultralytics==8.3.34",
+    "opencv-python==4.8.1.78",
+    "numpy==1.26.4",
+    "pillow==10.3.0",
+    "click==8.1.7",
+    "loguru==0.7.2",
+    "pandas==2.2.2",
+    "scikit-learn==1.4.2",
+    "tqdm==4.66.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.2.2",
+    "pytest-cov==5.0.0",
+    "coverage==7.5.3",
+    "flake8==7.1.1",
+]
+
+[project.scripts]
+multi-predict = "src.main:predict"
+multi-evaluate = "src.main:evaluate"
+multi-report = "src.main:report"
+multi-demo = "src.main:demo"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
