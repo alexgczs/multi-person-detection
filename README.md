@@ -179,6 +179,19 @@ This will:
 - Generate a technical report
 - Save results to a timestamped directory
 
+**Generated output:**
+The evaluation automatically creates a timestamped directory (e.g., `data/results/2025-08-17_21-41-15/`) containing:
+
+1. **`evaluation_results.json`** - Detailed results in JSON format:
+   - Per-video predictions and ground truth
+   - Performance metrics (accuracy, precision, recall, F1-score)
+   - Classification report with class-wise statistics
+
+2. **`technical_report.md`** - Markdown report including:
+   - Executive summary with key performance metrics
+   - Confusion matrix with TP/TN/FP/FN breakdown
+   - Error analysis identifying specific failed videos
+
 **Dataset format:**
 - Videos: `.mp4` files in the dataset directory
 - Labels: TSV file with columns `video` and `label` (0/1)
