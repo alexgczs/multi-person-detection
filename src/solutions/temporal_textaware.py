@@ -33,7 +33,16 @@ class TemporalTextAwareSolution(BaseSolution):
         if self._text_detector is None:
             try:
                 import easyocr
-                self._text_detector = easyocr.Reader(['en'], gpu=False)
+                # Try to detect if GPU is available, fallback to CPU if not
+                use_gpu = False
+                try:
+                    import torch
+                    use_gpu = torch.cuda.is_available()
+                except (ImportError, AttributeError):
+                    # If torch is not available or doesn't have CUDA support
+                    use_gpu = False
+
+                self._text_detector = easyocr.Reader(['en'], gpu=use_gpu)
             except ImportError:
                 raise ImportError(
                     "easyocr is required for text-aware solution. "
