@@ -321,7 +321,7 @@ The system offers four different approaches for aggregating frame-level detectio
 - `text_proximity_threshold`: 100 pixels (distance between face and text centers)
 - `text_confidence_threshold`: 0.5 (minimum OCR confidence for text detection)
 
-**Note:** This solution requires EasyOCR for text detection and may be slower than other approaches. Use a GPU is recommended.
+**Note:** This solution requires EasyOCR for text detection and may be slower than other approaches. GPU acceleration is automatically enabled when CUDA is available for faster OCR processing.
 
 </details>
 
