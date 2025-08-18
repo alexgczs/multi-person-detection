@@ -442,7 +442,8 @@ src/
 └── main.py                  # CLI interface
 
 tests/                       # Unit and integration tests
-data/                        # Dataset and results storage
+data/                        # Results storage
+resuts_report.md             # Report of the results obtained with each strategy
 ```
 
 ## Development
@@ -486,9 +487,9 @@ flake8 src/ tests/ # Run linting
 - [x] Dataset evaluation and reporting
 - [x] Real-time demo
 - [x] CLI interface (console scripting)
-- [X] Advanced temporal analysis
-- [ ] Report
-- [ ] Next steps with more time and data
+- [x] Advanced temporal analysis
+- [x] Report
+- [x] Next steps with more time and data
 
 ## Notes
 
