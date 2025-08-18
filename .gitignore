@@ -69,7 +69,6 @@ logs/
 *.tflite
 
 # Results and outputs
-results/
 outputs/
 *.png
 *.jpg

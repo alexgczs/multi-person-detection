@@ -40,7 +40,6 @@ def apply_detector_config(
     detector: PersonDetector,
     sample_rate: int | None = None,
     max_frames: int | None = None,
-    confidence_threshold: float | None = None,
     people_threshold: float | None = None,
     temporal_min_consecutive: int | None = None,
     card_min_area_ratio: float | None = None,
@@ -53,8 +52,6 @@ def apply_detector_config(
         detector.video_processor.config.FRAME_SAMPLE_RATE = int(sample_rate)
     if max_frames is not None:
         detector.video_processor.config.MAX_FRAMES = int(max_frames)
-    if confidence_threshold is not None:
-        detector.config.PERSON_CONFIDENCE_THRESHOLD = float(confidence_threshold)
     if people_threshold is not None:
         detector.config.MULTIPLE_PEOPLE_THRESHOLD = float(people_threshold)
     if temporal_min_consecutive is not None:
@@ -184,7 +181,6 @@ def predict(
             detector=detector,
             sample_rate=sample_rate,
             max_frames=max_frames,
-            confidence_threshold=threshold,
             people_threshold=people_threshold,
             temporal_min_consecutive=temporal_min_consecutive,
             card_min_area_ratio=card_min_area_ratio,
@@ -194,7 +190,7 @@ def predict(
         )
 
         logger.info(f"Processing video: {video}")
-        result = detector.predict(video_path=video)
+        result = detector.predict(video_path=video, confidence_threshold=threshold)
 
         # stdout output
         click.echo(f"label predicted: {int(result['has_multiple_people'])}")
