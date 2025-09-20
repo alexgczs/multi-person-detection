@@ -488,8 +488,6 @@ flake8 src/ tests/ # Run linting
 - [x] Real-time demo
 - [x] CLI interface (console scripting)
 - [x] Advanced temporal analysis
-- [x] Report
-- [x] Next steps with more time and data
 
 ## Notes
 
